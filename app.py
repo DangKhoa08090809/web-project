@@ -6,6 +6,19 @@ CORS(app)
 
 latest_data = {}
 
+@app.route("/live")
+def live():
+    return render_template("liveData.html")
+
+@app.route("/errors")
+def errors():
+    return render_template("errorCodes.html")
+
+@app.route("/vehicle")
+def vehicle():
+    return render_template("vehicleInfo.html")
+
+
 # Route chính -> render index.html
 @app.route("/")
 def index():
@@ -74,7 +87,10 @@ def analyze_post():
         "maintenance": maintenance
     }
 
-    return jsonify({"message": "Dữ liệu đã cập nhật thành công"})
+    return jsonify({
+    "alerts": alerts,
+    "maintenance": maintenance
+})
 
 
 @app.route("/analyze", methods=["GET"])
@@ -82,7 +98,6 @@ def analyze_get():
     if not latest_data:
         return jsonify({"error": "Chưa có dữ liệu nào từ simulator"}), 400
     return jsonify(latest_data)
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

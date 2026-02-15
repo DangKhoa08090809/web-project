@@ -34,8 +34,31 @@ function createChart() {
             ],
         },
         options: {
+            layout: {
+                padding: 5,
+            },
+
             responsive: true,
             maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: "white", // Màu chữ legend
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: "white", // Màu chữ trục X
+                    },
+                },
+                y: {
+                    ticks: {
+                        color: "white", // Màu chữ trục Y
+                    },
+                },
+            },
         },
     });
 }

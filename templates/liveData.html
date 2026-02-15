@@ -4,7 +4,10 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>OBD2 Master</title>
-        <link rel="stylesheet" href="css/liveData.css" />
+        <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='css/liveData.css') }}"
+        />
     </head>
 
     <body>
@@ -24,14 +27,9 @@
                 <div class="statusBox" id="statusBox">
                     <h1 id="status">Waiting Live Data...</h1>
                 </div>
-                <div class="vehicleInfoBox" id="vehicleInfo"></div>
-                <div class="dataBox" id="dataBox">
-                    <!--<div class="box">
-                    <h1><span id="Speed">0</span> KM/h</h1>
-                    <div class="name">
-                        <h2>Speed</h2>
-                    </div>
-                </div>-->
+                <div class="statusBoxx">
+                    <div class="vehicleInfoBox" id="vehicleInfo"></div>
+                    <div class="dataBox" id="dataBox"></div>
                 </div>
             </div>
         </main>

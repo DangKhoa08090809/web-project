@@ -115,6 +115,13 @@ main .statusBox {
     margin-bottom: 10px;
 }
 
+main .statusBoxx {
+    background-color: #393939;
+    border-radius: 10px;
+    padding: 2px 0;
+    margin-bottom: 10px;
+}
+
 main .statusBox h1 {
     margin: 14px 0;
     font-size: 26px;
@@ -174,4 +181,10 @@ main .dataBox .name {
         grid-template-columns: repeat(2, 1fr);
         column-gap: 10px;
     }
+}
+
+main .vehicleInfoBox {
+    padding-left: 5px;
+    padding-top: 5px;
+    color: white;
 }

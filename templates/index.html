@@ -4,14 +4,19 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width initial-scale=1.0" />
         <title>OBD2 Master</title>
-        <link rel="stylesheet" href="css/style.css" />
+        <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='css/style.css') }}"
+        />
     </head>
 
     <body>
         <div class="banner">
             <div class="mainContainer">
                 <div class="logoArea">
-                    <img src="IMG_5600.svg" />
+                    <img
+                        src="{{ url_for('static', filename='IMG_5600.svg') }}"
+                    />
                 </div>
                 <div class="textArea">
                     <div class="title">
@@ -52,7 +57,7 @@
         <main>
             <div class="mainContainer">
                 <nav>
-                    <a href="liveData.html">
+                    <a href="{{ url_for('live') }}">
                         <svg
                             viewBox="0 0 256 256"
                             xmlns="http://www.w3.org/2000/svg"
@@ -83,7 +88,7 @@
                         </svg>
                         <h2>Live Data</h2>
                     </a>
-                    <a href="errorCodes.html">
+                    <a href="{{ url_for('errors') }}">
                         <svg
                             viewBox="0 0 256 256"
                             xmlns="http://www.w3.org/2000/svg"
@@ -111,7 +116,7 @@
                         </svg>
                         <h2>Error Codes</h2>
                     </a>
-                    <a href="vehicleInfo.html">
+                    <a href="{{ url_for('vehicle') }}">
                         <svg
                             viewBox="0 0 266 266"
                             xmlns="http://www.w3.org/2000/svg"
@@ -128,7 +133,7 @@
                         <h2>Maintenance</h2>
                     </a>
                     <a
-                        href="vehicleInfo.html"
+                        href="{{ url_for('vehicle') }}"
                         style="
                             display: flex;
                             flex-direction: column;
@@ -185,7 +190,7 @@
                         <h2>Settings</h2>
                     </a>
                     <a
-                        href="vehicleInfo.html"
+                        href="{{ url_for('vehicle') }}"
                         style="
                             display: flex;
                             flex-direction: column;
@@ -216,5 +221,8 @@
             </div>
         </main>
     </body>
-    <script type="module" src="js/script.js"></script>
+    <script
+        type="module"
+        src="{{ url_for('static', filename='js/logic.js') }}"
+    ></script>
 </html>

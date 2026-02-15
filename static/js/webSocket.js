@@ -1,4 +1,4 @@
-let gateway = `ws://${window.location.hostname}/ws`;
+let gateway = `ws://${window.location.hostname}:5000/ws`;
 let ws = null;
 let messageHandler = null;
 
@@ -30,9 +30,6 @@ function onClose(event) {
 function onError(error) {
     console.log("WebSocket error:", error);
 }
-
-
-
 
 export function sendData(data) {
     if (ws && ws.readyState === WebSocket.OPEN) {
