@@ -1,80 +1,50 @@
-import { InitWebSocket, setMessageHandler, sendData } from "./webSocket.js";
-
 const API_BASE = "http://127.0.0.1:5000";
-
-const wsStatus = document.getElementById("ws");
-const vehicleStatus = document.getElementById("vehicleStatus");
-
-const btnArea = document.getElementById("btnArea");
-const clearDTC = document.getElementById("clearDTC");
-
-//clearDTC.addEventListener("click", function () {
-//    sendData("clear_dtc");
-//});
 
 const errorsField = document.getElementById("errorCodes");
 const mil = document.getElementById("DistanceTraveledWithMIL");
+const btnArea = document.getElementById("btnArea");
+const wsIcon = document.getElementById("ws");
+const vehicleIcon = document.getElementById("vehicleStatus");
 
-function handleWebSocketMessage(wsMessage) {
-    if (!wsMessage) {
-        wsStatus.style.fill = "red";
-        return;
-    }
-
-    wsStatus.style.fill = "#00ff00";
-    vehicleStatus.style.fill = wsMessage.vehicleStatus ? "#00ff00" : "red";
-
-    let DTCs = wsMessage.DTCs;
-    if (wsMessage.vehicleStatus == false) {
-        errorsField.innerHTML = "Not Connected to the Vehicle.";
-        btnArea.style.display = "none";
-    } else if (DTCs) {
-        errorsField.innerHTML = DTCs;
-        btnArea.style.display = "flex";
-    } else {
-        errorsField.innerHTML = "No errors detected.";
-        btnArea.style.display = "none";
-    }
-}
-
-const errorElement = document.getElementById("errorCodes");
-
-errorElement.addEventListener("click", analyzeError);
-
-async function analyzeError() {
+async function fetchAndDisplay() {
     try {
         const response = await fetch(`${API_BASE}/analyze`);
+
+        if (!response.ok) {
+            setDisconnectedState("No data yet from simulator...");
+            return;
+        }
 
         const result = await response.json();
 
         if (result.error) {
-            console.log(result.error);
+            setDisconnectedState(result.error);
             return;
         }
 
-        displayAnalysis(result);
-    } catch (error) {
-        console.error("Error:", error);
+        wsIcon.style.fill = "#00ff00";
+        vehicleIcon.style.fill = "#00ff00";
+
+        errorsField.innerHTML = result.alerts
+            .map((a) => `<p>${a}</p>`)
+            .join("");
+
+        mil.textContent = result.odometer.toLocaleString();
+
+        btnArea.style.display = "flex";
+    } catch (err) {
+        setDisconnectedState("Cannot connect to server.");
+        console.error("Fetch error:", err);
     }
 }
 
-function displayAnalysis(result) {
-    const alertsBox = document.getElementById("alertsBox");
-    const maintenanceBox = document.getElementById("maintenanceBox");
-
-    alertsBox.innerHTML = "";
-    maintenanceBox.innerHTML = "";
-
-    result.alerts.forEach((alert) => {
-        alertsBox.innerHTML += `<p>${alert}</p>`;
-    });
-
-    result.maintenance.forEach((item) => {
-        maintenanceBox.innerHTML += `<p>${item}</p>`;
-    });
+function setDisconnectedState(message) {
+    wsIcon.style.fill = "red";
+    vehicleIcon.style.fill = "red";
+    errorsField.textContent = message;
+    btnArea.style.display = "none";
+    mil.textContent = "0";
 }
 
-setInterval(analyzeError, 2000); // mỗi 2 giây lấy dữ liệu
-
-//setMessageHandler(handleWebSocketMessage);
-//InitWebSocket();
+fetchAndDisplay();
+setInterval(fetchAndDisplay, 2000);

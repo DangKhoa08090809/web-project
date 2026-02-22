@@ -42,11 +42,6 @@
                             <h2>Error Codes</h2>
                         </div>
                     </div>
-                    <div class="box" id="analysisResult">
-                        <h2>Analysis Result</h2>
-                        <div id="alertsBox"></div>
-                        <div id="maintenanceBox"></div>
-                    </div>
 
                     <div class="box MIL_Box">
                         <h1><span id="DistanceTraveledWithMIL">0</span> KM</h1>
@@ -61,5 +56,5 @@
             </div>
         </main>
     </body>
-    <script type="module" src="js/errorCodes.js"></script>
+    <script src="{{ url_for('static', filename='js/errorCodes.js') }}"></script>
 </html>
