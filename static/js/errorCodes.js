@@ -1,50 +1,38 @@
-const API_BASE = "http://127.0.0.1:5000";
+const BASE_URL = "https://your-domain.com"; // 🔁 Replace with your actual web URL
 
-const errorsField = document.getElementById("errorCodes");
-const mil = document.getElementById("DistanceTraveledWithMIL");
-const btnArea = document.getElementById("btnArea");
-const wsIcon = document.getElementById("ws");
-const vehicleIcon = document.getElementById("vehicleStatus");
-
-async function fetchAndDisplay() {
+async function fetchMaintenanceData() {
     try {
-        const response = await fetch(`${API_BASE}/analyze`);
+        const response = await fetch(`${BASE_URL}/analyze`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
 
         if (!response.ok) {
-            setDisconnectedState("No data yet from simulator...");
+            const errorData = await response.json();
+            document.getElementById("maintenance").innerHTML =
+                `<p style="color:red;">⚠️ ${errorData.error || "Không thể tải dữ liệu."}</p>`;
             return;
         }
 
-        const result = await response.json();
+        const data = await response.json();
+        const maintenanceList = data.maintenance;
+        const container = document.getElementById("maintenance");
 
-        if (result.error) {
-            setDisconnectedState(result.error);
+        if (!maintenanceList || maintenanceList.length === 0) {
+            container.innerHTML = "<p>✅ Không có hạng mục bảo dưỡng nào.</p>";
             return;
         }
 
-        wsIcon.style.fill = "#00ff00";
-        vehicleIcon.style.fill = "#00ff00";
+        const html = maintenanceList.map((item) => `<li>${item}</li>`).join("");
 
-        errorsField.innerHTML = result.alerts
-            .map((a) => `<p>${a}</p>`)
-            .join("");
-
-        mil.textContent = result.odometer.toLocaleString();
-
-        btnArea.style.display = "flex";
-    } catch (err) {
-        setDisconnectedState("Cannot connect to server.");
-        console.error("Fetch error:", err);
+        container.innerHTML = `<ul>${html}</ul>`;
+    } catch (error) {
+        document.getElementById("maintenance").innerHTML =
+            `<p style="color:red;">❌ Lỗi kết nối: ${error.message}</p>`;
     }
 }
 
-function setDisconnectedState(message) {
-    wsIcon.style.fill = "red";
-    vehicleIcon.style.fill = "red";
-    errorsField.textContent = message;
-    btnArea.style.display = "none";
-    mil.textContent = "0";
-}
-
-fetchAndDisplay();
-setInterval(fetchAndDisplay, 2000);
+fetchMaintenanceData();
+setInterval(fetchMaintenanceData, 5000);

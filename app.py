@@ -18,6 +18,9 @@ def errors():
 def vehicle():
     return render_template("vehicleInfo.html")
 
+@app.route("/maintenance")
+def maintenance():
+    return render_template("maintenance.html")
 
 # Route chính -> render index.html
 @app.route("/")
