@@ -8,6 +8,12 @@
             rel="stylesheet"
             href="{{ url_for('static', filename='css/maintenance.css') }}"
         />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap"
+            rel="stylesheet"
+        />
     </head>
 
     <body>
@@ -17,7 +23,7 @@
                     <a href="/"><span class="arrow"></span></a>
                 </div>
                 <div class="textArea">
-                    <h1><span class="orange">Maintenance</span> Check</h1>
+                    <h1><span class="orange">Maintenance</span></h1>
                 </div>
                 <div class="connectionArea">
                     <svg id="ws" viewBox="0 0 512 512">
@@ -37,48 +43,64 @@
         <main>
             <div class="mainContainer">
                 <div class="data">
-
-                    <!-- Suggested Procedure -->
+                    <!-- Suggested Procedure Box -->
                     <div class="box">
-                        <h1><span id="maintenance">Waiting data...</span></h1>
+                        <h1><span id="maintenance">Waiting Error...</span></h1>
                         <div class="name">
-                            <h2>Suggested Procedure</h2>
+                            <h2>Suggested procedure</h2>
                         </div>
                     </div>
 
-                    <!-- AI Chatbox -->
-                    <div class="box chatbox-box">
+                    <!-- AI Chatbox — right below Suggested Procedure -->
+                    <div class="box chatbox-wrapper">
                         <div class="chatbox-header">
                             <div class="chatbox-title">
-                                <div class="ai-dots">
-                                    <span></span><span></span><span></span>
+                                <div class="ai-indicator">
+                                    <span class="ai-dot"></span>
+                                    <span class="ai-dot"></span>
+                                    <span class="ai-dot"></span>
                                 </div>
                                 <h2>AI Diagnostic Assistant</h2>
                             </div>
-                            <span class="chat-status" id="chatStatus">READY</span>
+                            <span class="chatbox-status" id="chatStatus"
+                                >READY</span
+                            >
                         </div>
 
                         <div class="chatbox-messages" id="chatMessages">
                             <div class="message bot-message">
-                                <div class="avatar bot-avatar">AI</div>
-                                <div class="bubble">
-                                    Hello! I'm your OBD2 diagnostic assistant. Ask me anything about your vehicle's maintenance alerts or error codes.
+                                <div class="message-avatar bot-avatar">AI</div>
+                                <div class="message-bubble">
+                                    Hello! I'm your OBD2 diagnostic assistant.
+                                    Ask me anything about your vehicle's error
+                                    codes or maintenance alerts.
                                 </div>
                             </div>
                         </div>
 
-                        <div class="chatbox-input-row">
+                        <div class="chatbox-input-area">
                             <input
                                 type="text"
                                 id="chatInput"
                                 class="chat-input"
-                                placeholder="Ask about your vehicle..."
+                                placeholder="Ask about your error codes..."
                                 autocomplete="off"
                             />
-                            <button class="chat-send-btn" id="chatSendBtn" onclick="sendMessage()">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <button
+                                class="chat-send-btn"
+                                id="chatSendBtn"
+                                onclick="sendMessage()"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
                                     <line x1="22" y1="2" x2="11" y2="13"></line>
-                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                    <polygon
+                                        points="22 2 15 22 11 13 2 9 22 2"
+                                    ></polygon>
                                 </svg>
                             </button>
                         </div>
@@ -91,7 +113,6 @@
                             <h2>Distance Traveled With MIL</h2>
                         </div>
                     </div>
-
                 </div>
 
                 <div class="btnArea" id="btnArea">
