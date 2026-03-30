@@ -1,38 +1,32 @@
-const BASE_URL = "https://your-domain.com"; // 🔁 Replace with your actual web URL
-
-async function fetchMaintenanceData() {
+async function fetchErrorCodesData() {
     try {
-        const response = await fetch(`${BASE_URL}/analyze`, {
+        const response = await fetch("/analyze", {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            document.getElementById("maintenance").innerHTML =
+            document.getElementById("errorCodes").innerHTML =
                 `<p style="color:red;">⚠️ ${errorData.error || "Không thể tải dữ liệu."}</p>`;
             return;
         }
 
         const data = await response.json();
-        const maintenanceList = data.maintenance;
-        const container = document.getElementById("maintenance");
+        const alertList = data.alerts;
+        const container = document.getElementById("errorCodes");
 
-        if (!maintenanceList || maintenanceList.length === 0) {
-            container.innerHTML = "<p>✅ Không có hạng mục bảo dưỡng nào.</p>";
+        if (!alertList || alertList.length === 0) {
+            container.innerHTML = "<p>✅ Không có lỗi nào.</p>";
             return;
         }
 
-        const html = maintenanceList.map((item) => `<li>${item}</li>`).join("");
-
-        container.innerHTML = `<ul>${html}</ul>`;
+        container.innerHTML = `<ul>${alertList.map((item) => `<li>${item}</li>`).join("")}</ul>`;
     } catch (error) {
-        document.getElementById("maintenance").innerHTML =
+        document.getElementById("errorCodes").innerHTML =
             `<p style="color:red;">❌ Lỗi kết nối: ${error.message}</p>`;
     }
 }
 
-fetchMaintenanceData();
-setInterval(fetchMaintenanceData, 5000);
+fetchErrorCodesData();
+setInterval(fetchErrorCodesData, 5000);

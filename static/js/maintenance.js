@@ -1,8 +1,6 @@
-const BASE_URL = "https://your-domain.com"; // 🔁 Replace with your actual web URL
-
 async function fetchMaintenanceData() {
     try {
-        const response = await fetch(`${BASE_URL}/analyze`, {
+        const response = await fetch("/analyze", {
             method: "GET",
             headers: { "Content-Type": "application/json" },
         });
@@ -23,8 +21,7 @@ async function fetchMaintenanceData() {
             return;
         }
 
-        container.innerHTML = `<ul>${maintenanceList.map(item => `<li>${item}</li>`).join("")}</ul>`;
-
+        container.innerHTML = `<ul>${maintenanceList.map((item) => `<li>${item}</li>`).join("")}</ul>`;
     } catch (error) {
         document.getElementById("maintenance").innerHTML =
             `<p style="color:#ff3b30;">❌ Lỗi kết nối: ${error.message}</p>`;
