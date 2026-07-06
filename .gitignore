@@ -1,4 +1,9 @@
-# Created by venv; see https://docs.python.org/3/library/venv.html
-venv
-settings.conf
 .env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+instance/
+*.db
+.coverage

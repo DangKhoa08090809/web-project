@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ session.session_id }} · ECU Master{% endblock %}
+{% block head %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>{% endblock %}
+{% block content %}
+<section class="page-heading"><div><p class="eyebrow">{{ session.device.device_name }} · {{ session.device.vehicle_name }}</p><h1>{{ session.session_id }}</h1><p>{{ session.record_count }} records · {{ session.started_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p></div></section>
+<section class="card chart-card"><canvas id="telemetryChart" height="110"></canvas></section>
+<section class="card table-card"><div class="table-wrap"><table><thead><tr><th>Seq</th><th>Timestamp</th><th>RPM</th><th>TPS</th><th>ECT</th><th>Battery</th></tr></thead><tbody>
+{% for record in records[-100:] %}<tr><td>{{ record.seq }}</td><td>{{ record.timestamp.strftime('%H:%M:%S.%f')[:-3] }}</td><td>{{ record.rpm if record.rpm is not none else '—' }}</td><td>{{ record.tps if record.tps is not none else '—' }}</td><td>{{ record.ect if record.ect is not none else '—' }}</td><td>{{ record.battery if record.battery is not none else '—' }}</td></tr>{% endfor %}
+</tbody></table></div>{% if records|length > 100 %}<p class="table-note">Showing the latest 100 rows; chart includes up to 5,000.</p>{% endif %}</section>
+{% endblock %}
+{% block scripts %}
+<script>
+window.addEventListener("load", () => {
+  const rows = {{ chart_data|tojson }};
+  new Chart(document.getElementById("telemetryChart"), {type: "line", data: {labels: rows.map(r => r.timestamp), datasets: [
+    {label: "RPM", data: rows.map(r => r.rpm), borderColor: "#0969da", yAxisID: "y", pointRadius: 0},
+    {label: "ECT °C", data: rows.map(r => r.ect), borderColor: "#f59e0b", yAxisID: "temperature", pointRadius: 0}
+  ]}, options: {responsive: true, interaction: {mode: "index", intersect: false}, scales: {temperature: {position: "right", grid: {drawOnChartArea: false}}}}});
+});
+</script>
+{% endblock %}

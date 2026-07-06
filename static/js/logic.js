@@ -1,5 +1,4 @@
 let latestData = {};
-let baseURL = window.location.hostname;
 
 // History for temperature chart
 let historyData = {
@@ -65,7 +64,7 @@ function createChart() {
 
 async function getData() {
     try {
-        let response = await fetch(`http://${baseURL}:5000/analyze`);
+        let response = await fetch("/analyze");
         let data = await response.json();
 
         if (!data.error) {

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Sessions · ECU Master{% endblock %}
+{% block content %}
+<section class="page-heading"><div><p class="eyebrow">Ride history</p><h1>Sessions</h1><p>Live and uploaded telemetry grouped by reader session.</p></div></section>
+<section class="card table-card">
+<div class="table-wrap"><table><thead><tr><th>Session</th><th>Device</th><th>Started</th><th>Last record</th><th>Records</th></tr></thead><tbody>
+{% for session in sessions %}<tr><td><a href="{{ url_for('dashboard.session_detail', session_pk=session.id) }}">{{ session.session_id }}</a></td><td>{{ session.device.device_name }}</td><td>{{ session.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</td><td>{{ session.last_record_at.strftime('%Y-%m-%d %H:%M:%S') }}</td><td>{{ session.record_count }}</td></tr>
+{% else %}<tr><td colspan="5" class="empty">No telemetry sessions yet.</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}

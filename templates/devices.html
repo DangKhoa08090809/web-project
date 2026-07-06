@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Devices · ECU Master{% endblock %}
+{% block content %}
+<section class="page-heading"><div><p class="eyebrow">Hardware access</p><h1>Devices</h1><p>Tokens are shown once and stored only as hashes.</p></div></section>
+{% if new_token %}
+<div class="alert success"><strong>Save this token now for {{ created_device.device_id }}.</strong><p>It cannot be recovered after leaving this page.</p><input class="token" readonly value="{{ new_token }}" onclick="this.select()"></div>
+{% endif %}
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+<section class="two-column">
+    <article class="card">
+        <h2>Register a reader</h2>
+        <form method="post" class="stack-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>Device ID<input name="device_id" maxlength="64" placeholder="xiao-ecu-001" required></label>
+            <label>Device name<input name="device_name" maxlength="100" placeholder="Garage reader" required></label>
+            <label>Vehicle name<input name="vehicle_name" maxlength="100" placeholder="Civic EK" required></label>
+            <label>ECU type<input name="ecu_type" maxlength="100" placeholder="OBD-II / CAN" required></label>
+            <button class="primary" type="submit">Create device token</button>
+        </form>
+    </article>
+    <div class="list-stack">
+    {% for device in devices %}
+        <article class="card list-card"><div><h2>{{ device.device_name }}</h2><p>{{ device.device_id }}</p><p class="muted">{{ device.vehicle_name }} · {{ device.ecu_type }}</p></div><span class="status {{ 'online' if device.is_active else 'idle' }}">{{ 'Enabled' if device.is_active else 'Disabled' }}</span></article>
+    {% else %}<article class="card empty"><p>No registered devices.</p></article>{% endfor %}
+    </div>
+</section>
+{% endblock %}

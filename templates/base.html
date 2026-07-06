@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}ECU Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header class="app-header">
+        <a class="brand" href="{{ url_for('dashboard.home') }}"><span>ECU</span> Master</a>
+        {% if current_user.is_authenticated %}<nav>
+            <a href="{{ url_for('dashboard.home') }}">Dashboard</a>
+            <a href="{{ url_for('dashboard.devices') }}">Devices</a>
+            <a href="{{ url_for('dashboard.sessions') }}">Sessions</a>
+            <a href="{{ url_for('classic') }}">Classic tools</a>
+        </nav>
+        <div class="account">
+            <span>{{ current_user.full_name }}</span>
+            <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="link-button" type="submit">Log out</button>
+            </form>
+        </div>{% endif %}
+    </header>
+    <main class="page-shell">
+        {% block content %}{% endblock %}
+    </main>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

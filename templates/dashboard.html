@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · ECU Master{% endblock %}
+{% block content %}
+<section class="hero">
+    <div><p class="eyebrow">Fleet overview</p><h1>Good to see you, {{ current_user.full_name }}.</h1><p>Latest readings from authenticated ECU devices.</p></div>
+    <a class="primary button" href="{{ url_for('dashboard.devices') }}">Add a device</a>
+</section>
+{% if devices %}
+<section class="device-grid">
+{% for device in devices %}
+    {% set reading = latest.get(device.id) %}
+    <article class="card device-card">
+        <div class="card-title"><div><h2>{{ device.device_name }}</h2><p>{{ device.vehicle_name }} · {{ device.ecu_type }}</p></div><span class="status {{ 'online' if device.is_active and device.last_seen_at else 'idle' }}">{{ 'Active' if device.is_active else 'Disabled' }}</span></div>
+        <dl class="metrics">
+            <div><dt>RPM</dt><dd>{{ reading.rpm|round|int if reading and reading.rpm is not none else '—' }}</dd></div>
+            <div><dt>TPS</dt><dd>{{ (reading.tps|string + '%') if reading and reading.tps is not none else '—' }}</dd></div>
+            <div><dt>Coolant</dt><dd>{{ (reading.ect|string + '°C') if reading and reading.ect is not none else '—' }}</dd></div>
+            <div><dt>Battery</dt><dd>{{ (reading.battery|string + ' V') if reading and reading.battery is not none else '—' }}</dd></div>
+        </dl>
+        <p class="muted">ID {{ device.device_id }} · Last seen {{ device.last_seen_at.strftime('%Y-%m-%d %H:%M UTC') if device.last_seen_at else 'never' }}</p>
+    </article>
+{% endfor %}
+</section>
+{% else %}
+<section class="empty card"><h2>No devices yet</h2><p>Create a reader and copy its one-time token to your ESP/XIAO firmware.</p><a class="primary button" href="{{ url_for('dashboard.devices') }}">Create first device</a></section>
+{% endif %}
+{% endblock %}

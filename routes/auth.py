@@ -1,53 +1,62 @@
-# routes/auth.py — register, login, logout
-from flask import Blueprint, request, jsonify
-from flask_login import login_user, logout_user, login_required, current_user
+from urllib.parse import urljoin, urlsplit
+
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user, login_required, login_user, logout_user
+from flask_wtf.csrf import generate_csrf
+
 from models import User
-from database import db
+
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
-@auth_bp.route("/register", methods=["POST"])
-def register():
-    data      = request.get_json()
-    full_name = data.get("full_name", "").strip()
-    email     = data.get("email", "").strip().lower()
-    password  = data.get("password", "")
 
-    if not full_name or not email or not password:
-        return jsonify({"error": "All fields are required"}), 400
-    if User.query.filter_by(email=email).first():
-        return jsonify({"error": "Email already registered"}), 409
-
-    user = User(full_name=full_name, email=email)
-    user.set_password(password)
-    db.session.add(user)
-    db.session.commit()
-    login_user(user)
-    return jsonify({"message": "Registered successfully", "user": user.to_dict()}), 201
+def _safe_next(target: str | None) -> str | None:
+    if not target:
+        return None
+    host = urlsplit(request.host_url)
+    candidate = urlsplit(urljoin(request.host_url, target))
+    return target if candidate.scheme in ("http", "https") and candidate.netloc == host.netloc else None
 
 
-@auth_bp.route("/login", methods=["POST"])
+@auth_bp.get("/csrf")
+def csrf_token():
+    return jsonify({"csrf_token": generate_csrf()})
+
+
+@auth_bp.route("/login", methods=["GET", "POST"])
 def login():
-    data     = request.get_json()
-    email    = data.get("email", "").strip().lower()
-    password = data.get("password", "")
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard.home"))
+    error = None
+    if request.method == "POST":
+        data = request.get_json(silent=True) if request.is_json else request.form
+        data = data or {}
+        email = str(data.get("email", "")).strip().lower()
+        password = str(data.get("password", ""))
+        user = User.query.filter_by(email=email, is_active=True).first()
+        if not user or not user.check_password(password):
+            error = "Invalid email or password."
+        else:
+            remember = data.get("remember") in (True, "1", "true", "on")
+            login_user(user, remember=remember)
+            if request.is_json:
+                return jsonify({"message": "Logged in", "user": user.to_dict(), "csrf_token": generate_csrf()})
+            return redirect(_safe_next(request.args.get("next")) or url_for("dashboard.home"))
+        if request.is_json:
+            return jsonify({"error": error}), 401
+    return render_template("login.html", error=error)
 
-    user = User.query.filter_by(email=email).first()
-    if not user or not user.check_password(password):
-        return jsonify({"error": "Invalid email or password"}), 401
 
-    login_user(user)
-    return jsonify({"message": "Logged in", "user": user.to_dict()})
-
-
-@auth_bp.route("/logout", methods=["POST"])
+@auth_bp.post("/logout")
 @login_required
 def logout():
     logout_user()
-    return jsonify({"message": "Logged out"})
+    if request.is_json:
+        return jsonify({"message": "Logged out"})
+    return redirect(url_for("auth.login"))
 
 
-@auth_bp.route("/me", methods=["GET"])
+@auth_bp.get("/me")
 @login_required
 def me():
     return jsonify(current_user.to_dict())
