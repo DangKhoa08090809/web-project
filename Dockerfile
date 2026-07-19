@@ -11,4 +11,4 @@ RUN chown -R app:app /app
 USER app
 
 EXPOSE 5000
-CMD ["sh", "-c", "flask --app app db upgrade && gunicorn --bind 0.0.0.0:5000 --workers 2 --threads 4 --access-logfile - 'app:create_app()'"]
+CMD ["sh", "-c", "flask --app app db upgrade && gunicorn --bind 0.0.0.0:5000 --worker-class gthread --workers ${GUNICORN_WORKERS:-2} --threads ${GUNICORN_THREADS:-8} --timeout 120 --graceful-timeout 30 --keep-alive 5 --access-logfile - 'app:create_app()'"]

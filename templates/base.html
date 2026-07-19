@@ -11,10 +11,13 @@
     <header class="app-header">
         <a class="brand" href="{{ url_for('dashboard.home') }}"><span>ECU</span> Master</a>
         {% if current_user.is_authenticated %}<nav>
-            <a href="{{ url_for('dashboard.home') }}">Dashboard</a>
-            <a href="{{ url_for('dashboard.devices') }}">Devices</a>
+            <a href="{{ url_for('dashboard.home') }}">Overview</a>
             <a href="{{ url_for('dashboard.sessions') }}">Sessions</a>
-            <a href="{{ url_for('classic') }}">Classic tools</a>
+            <a href="{{ url_for('dashboard.analysis') }}">AI Analysis</a>
+            <a href="{{ url_for('dashboard.compare') }}">Compare</a>
+            <a href="{{ url_for('dashboard.tool') }}">Tool</a>
+            <a href="{{ url_for('dashboard.devices') }}">Devices</a>
+            <a href="{{ url_for('dashboard.settings') }}">Settings</a>
         </nav>
         <div class="account">
             <span>{{ current_user.full_name }}</span>

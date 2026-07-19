@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}AI Analysis · ECU Master{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Model and analysis status</p>
+        <h1>AI Analysis</h1>
+        <p>Inspect anomaly results across uploaded sessions and confirm whether the external ML API is reachable.</p>
+    </div>
+</section>
+
+<section class="dashboard-grid">
+    <article class="card feature-card">
+        <div class="card-title">
+            <div>
+                <p class="eyebrow">Model status</p>
+                <h2>{{ 'ML API available' if ml_status.available else 'ML API unavailable' }}</h2>
+            </div>
+            <span class="badge {{ 'normal' if ml_status.available else 'failed' }}">{{ 'Available' if ml_status.available else 'Unavailable' }}</span>
+        </div>
+        <dl class="detail-grid">
+            <div><dt>ML API</dt><dd>{{ ml_status.base_url or 'Not configured' }}</dd></div>
+            <div><dt>Loaded model</dt><dd>{{ ml_status.model_name }}</dd></div>
+            <div><dt>Model version</dt><dd>{{ ml_status.model_version }}</dd></div>
+            <div><dt>Training data</dt><dd>{{ ml_status.training_data_version }}</dd></div>
+            <div><dt>Feature schema</dt><dd>{{ ml_status.feature_schema_version }}</dd></div>
+            <div><dt>Threshold</dt><dd>{{ ml_status.detection_threshold }}</dd></div>
+            <div><dt>Last successful analysis</dt><dd>{{ ml_status.last_successful_analysis }}</dd></div>
+            <div><dt>Average latency</dt><dd>{{ ml_status.average_latency_ms ~ ' ms' if ml_status.average_latency_ms is not none else 'Not reported' }}</dd></div>
+            <div><dt>Failed analyses</dt><dd>{{ ml_status.failed_analysis_count }}</dd></div>
+        </dl>
+        <p class="caution">{{ ml_status.message }}</p>
+    </article>
+
+    <article class="card interpretation-card">
+        <p class="eyebrow">Result interpretation</p>
+        <h2>How to read these results</h2>
+        <p>Isolation Forest detects patterns that differ from learned normal behavior. It does not directly prove that a mechanical component has failed.</p>
+        <p>Diagnostic suggestions are rule-based support and require human verification. Treat anomalies as “inspect this area” signals, not definitive fault identification.</p>
+    </article>
+</section>
+
+<section class="card table-card">
+    <div class="section-pad">
+        <p class="eyebrow">Analysis result table</p>
+        <h2>Uploaded sessions</h2>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Session</th><th>Analysis date</th><th>Result</th><th>Max score</th><th>Mean score</th><th>Anomalous samples</th><th>Anomalous %</th><th>Events</th><th>Model version</th><th>Re-analysis</th></tr>
+            </thead>
+            <tbody>
+                {% for item in analyses %}
+                <tr>
+                    <td><a href="{{ url_for('dashboard.session_detail', session_pk=item.session_pk) }}">{{ item.session_id }}</a></td>
+                    <td>{{ item.upload_time }}</td>
+                    <td><span class="badge {{ item.result|lower|replace(' ', '-') }}">{{ item.result }}</span></td>
+                    <td>{{ '%.2f'|format(item.max_anomaly_score) if item.max_anomaly_score is not none else '--' }}</td>
+                    <td>{{ '%.2f'|format(item.mean_anomaly_score) if item.mean_anomaly_score is not none else '--' }}</td>
+                    <td>{{ item.anomalous_sample_count }}</td>
+                    <td>{{ '%.1f%%'|format(item.anomalous_sample_percentage) if item.anomalous_sample_percentage is not none else '--' }}</td>
+                    <td>{{ item.event_count }}</td>
+                    <td>{{ item.model_version }}</td>
+                    <td>
+                        <button class="secondary js-analysis-rerun" type="button" data-session="{{ item.session_pk }}">Re-run</button>
+                        <span class="muted js-analysis-state" aria-live="polite"></span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="10" class="empty">No uploaded sessions are available for analysis.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboardApi.js') }}"></script>
+<script src="{{ url_for('static', filename='js/analysis.js') }}"></script>
+{% endblock %}

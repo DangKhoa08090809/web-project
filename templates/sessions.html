@@ -1,10 +1,120 @@
 {% extends "base.html" %}
 {% block title %}Sessions · ECU Master{% endblock %}
 {% block content %}
-<section class="page-heading"><div><p class="eyebrow">Ride history</p><h1>Sessions</h1><p>Live and uploaded telemetry grouped by reader session.</p></div></section>
-<section class="card table-card">
-<div class="table-wrap"><table><thead><tr><th>Session</th><th>Device</th><th>Started</th><th>Last record</th><th>Records</th></tr></thead><tbody>
-{% for session in sessions %}<tr><td><a href="{{ url_for('dashboard.session_detail', session_pk=session.id) }}">{{ session.session_id }}</a></td><td>{{ session.device.device_name }}</td><td>{{ session.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</td><td>{{ session.last_record_at.strftime('%Y-%m-%d %H:%M:%S') }}</td><td>{{ session.record_count }}</td></tr>
-{% else %}<tr><td colspan="5" class="empty">No telemetry sessions yet.</td></tr>{% endfor %}
-</tbody></table></div></section>
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Uploaded ride history</p>
+        <h1>Sessions</h1>
+        <p>Browse stored ECU sessions. This is historical uploaded data, not a live driving stream.</p>
+    </div>
+</section>
+
+<section class="card filter-card">
+    <form method="get" class="filter-grid">
+        <label>Search
+            <input name="search" value="{{ filters.get('search', '') }}" placeholder="Session, device, vehicle, notes">
+        </label>
+        <label>Date from
+            <input type="date" name="date_from" value="{{ filters.get('date_from', '') }}">
+        </label>
+        <label>Date to
+            <input type="date" name="date_to" value="{{ filters.get('date_to', '') }}">
+        </label>
+        <label>Device
+            <select name="device_id">
+                <option value="">All devices</option>
+                {% for device in devices %}
+                <option value="{{ device.device_id }}" {% if filters.get('device_id') == device.device_id %}selected{% endif %}>{{ device.device_name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Vehicle
+            <select name="vehicle">
+                <option value="">All vehicles</option>
+                {% for vehicle in vehicles %}
+                <option value="{{ vehicle }}" {% if filters.get('vehicle') == vehicle %}selected{% endif %}>{{ vehicle }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Processing state
+            <select name="state">
+                <option value="">Any state</option>
+                {% for state in session_states %}
+                <option value="{{ state }}" {% if filters.get('state') == state %}selected{% endif %}>{{ state }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Analysis result
+            <select name="result">
+                <option value="">Any result</option>
+                <option value="normal" {% if filters.get('result') == 'normal' %}selected{% endif %}>Normal only</option>
+                <option value="anomalous" {% if filters.get('result') == 'anomalous' %}selected{% endif %}>Anomalous only</option>
+                {% for result in analysis_results %}
+                <option value="{{ result }}" {% if filters.get('result') == result %}selected{% endif %}>{{ result }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="check"><input type="checkbox" name="has_errors" value="1" {% if filters.get('has_errors') == '1' %}checked{% endif %}> Processing errors</label>
+        <label class="check"><input type="checkbox" name="has_events" value="1" {% if filters.get('has_events') == '1' %}checked{% endif %}> Contains events</label>
+        <button class="primary" type="submit">Apply filters</button>
+        <a class="secondary button" href="{{ url_for('dashboard.sessions') }}">Reset</a>
+    </form>
+</section>
+
+<section class="session-list">
+    {% for session in sessions %}
+    <article class="session-card">
+        <div class="session-main">
+            <div>
+                <a class="session-title" href="{{ url_for('dashboard.session_detail', session_pk=session.id) }}">{{ session.session_id }}</a>
+                <p>{{ session.vehicle }} · {{ session.device }}</p>
+                {% if session.notes %}<p class="muted">{{ session.notes }}</p>{% endif %}
+            </div>
+            <div class="session-badges">
+                <span class="badge processing">{{ session.processing_state }}</span>
+                <span class="badge {{ session.result|lower|replace(' ', '-') }}">{{ session.result }}</span>
+            </div>
+        </div>
+        <dl class="session-metrics">
+            <div><dt>Started</dt><dd>{{ session.start_time }}</dd></div>
+            <div><dt>Uploaded</dt><dd>{{ session.upload_time }}</dd></div>
+            <div><dt>Duration</dt><dd>{{ session.duration_label }}</dd></div>
+            <div><dt>Samples</dt><dd>{{ session.sample_count }}</dd></div>
+            <div><dt>Events</dt><dd>{{ session.event_count }}</dd></div>
+            <div><dt>Anomalous</dt><dd>{{ '%.1f%%'|format(session.anomalous_sample_percentage) if session.anomalous_sample_percentage is not none else '--' }}</dd></div>
+        </dl>
+        <div class="action-stack session-actions">
+            <a class="secondary button" href="{{ url_for('dashboard.session_detail', session_pk=session.id) }}">Open</a>
+            <a class="secondary button" href="{{ url_for('dashboard.session_detail', session_pk=session.id) }}#session-notes">Notes</a>
+            <button class="secondary js-rerun" type="button" data-session="{{ session.id }}">Re-run analysis</button>
+            <a class="secondary button" href="{{ url_for('dashboard.session_csv', session_pk=session.id) }}">CSV</a>
+            <a class="secondary button" href="{{ url_for('dashboard.session_json', session_pk=session.id) }}">JSON</a>
+            <form method="post" action="{{ url_for('dashboard.delete_session', session_pk=session.id) }}" onsubmit="return confirm('Delete this uploaded session and its telemetry records?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="danger" type="submit">Delete</button>
+            </form>
+        </div>
+    </article>
+    {% else %}
+    <section class="empty card">No uploaded sessions match these filters.</section>
+    {% endfor %}
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboardApi.js') }}"></script>
+<script>
+document.querySelectorAll(".js-rerun").forEach((button) => {
+  button.addEventListener("click", async () => {
+    button.textContent = "Queued";
+    button.disabled = true;
+    try {
+      await window.drisafeApi.rerunAnalysis(button.dataset.session);
+      button.textContent = "Requested";
+    } catch (error) {
+      button.textContent = "Unavailable";
+      button.title = error.message;
+    }
+  });
+});
+</script>
 {% endblock %}

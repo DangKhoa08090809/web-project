@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Compare · ECU Master{% endblock %}
+{% block head %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Session comparison</p>
+        <h1>Compare</h1>
+        <p>Compare two uploaded sessions using elapsed time from session start.</p>
+    </div>
+</section>
+
+<section class="card filter-card" id="compare-app">
+    <div class="filter-grid">
+        <label>Baseline session
+            <select id="baseline-session">
+                {% for session in sessions %}
+                <option value="{{ session.id }}">{{ session.session_id }} · {{ session.vehicle }} · {{ session.start_time }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Comparison session
+            <select id="comparison-session">
+                {% for session in sessions %}
+                <option value="{{ session.id }}" {% if loop.index == 2 %}selected{% endif %}>{{ session.session_id }} · {{ session.vehicle }} · {{ session.start_time }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Parameter
+            <select id="compare-parameter"></select>
+        </label>
+        <button class="primary" id="run-compare" type="button">Compare sessions</button>
+    </div>
+</section>
+
+<section id="compare-empty" class="empty card">
+    <h2>Select two uploaded sessions</h2>
+    <p>Use this for normal versus anomalous, before-repair versus after-repair, cold versus warm engine, or device-to-device checks.</p>
+</section>
+
+<section id="compare-results" class="compare-results" hidden>
+    <article class="card table-card">
+        <div class="section-pad">
+            <p class="eyebrow">Comparison summary</p>
+            <h2 id="compare-title">Session metrics</h2>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Metric</th><th>Baseline</th><th>Comparison</th><th>Delta</th></tr></thead>
+                <tbody id="compare-metrics"></tbody>
+            </table>
+        </div>
+    </article>
+
+    <article class="card chart-card fixed-chart">
+        <div class="chart-toolbar">
+            <div>
+                <p class="eyebrow">Aligned chart</p>
+                <h2>Elapsed time overlay</h2>
+            </div>
+        </div>
+        <canvas id="compare-chart"></canvas>
+    </article>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboardApi.js') }}"></script>
+<script src="{{ url_for('static', filename='js/compare.js') }}"></script>
+{% endblock %}

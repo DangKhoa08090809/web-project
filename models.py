@@ -49,13 +49,17 @@ class Device(db.Model):
     vehicle_name = db.Column(db.String(100), nullable=False)
     ecu_type = db.Column(db.String(100), nullable=False)
     token_hash = db.Column(db.String(64), nullable=False)
+    firmware_version = db.Column(db.String(100))
+    hardware_version = db.Column(db.String(100))
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utc_now)
+    paired_at = db.Column(db.DateTime(timezone=True))
     last_seen_at = db.Column(db.DateTime(timezone=True))
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
     owner = db.relationship("User", back_populates="devices")
     sessions = db.relationship("RideSession", back_populates="device", cascade="all, delete-orphan")
     telemetry_records = db.relationship("TelemetryRecord", back_populates="device", cascade="all, delete-orphan")
+    pairing_codes = db.relationship("DevicePairingCode", back_populates="paired_device", foreign_keys="DevicePairingCode.device_id")
 
     @staticmethod
     def hash_token(token: str) -> str:
@@ -74,10 +78,46 @@ class Device(db.Model):
             "device_name": self.device_name,
             "vehicle_name": self.vehicle_name,
             "ecu_type": self.ecu_type,
+            "firmware_version": self.firmware_version,
+            "hardware_version": self.hardware_version,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "paired_at": self.paired_at.isoformat() if self.paired_at else None,
             "last_seen_at": self.last_seen_at.isoformat() if self.last_seen_at else None,
             "is_active": self.is_active,
         }
+
+
+class DevicePairingCode(db.Model):
+    __tablename__ = "device_pairing_codes"
+    __table_args__ = (
+        db.UniqueConstraint("code_hash", name="uq_device_pairing_codes_code_hash"),
+        db.Index("ix_device_pairing_codes_user_expires", "user_id", "expires_at"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    code_hash = db.Column(db.String(64), nullable=False)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    used_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utc_now)
+    attempt_count = db.Column(db.Integer, nullable=False, default=0)
+    device_id = db.Column(db.Integer, db.ForeignKey("devices.id", ondelete="SET NULL"))
+
+    owner = db.relationship("User", backref=db.backref("pairing_codes", cascade="all, delete-orphan"))
+    paired_device = db.relationship("Device", back_populates="pairing_codes", foreign_keys=[device_id])
+
+    @staticmethod
+    def hash_code(code: str) -> str:
+        normalized = "".join(str(code).upper().replace("-", " ").split())
+        return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+    @property
+    def is_used(self) -> bool:
+        return self.used_at is not None
+
+    @property
+    def is_expired(self) -> bool:
+        expires_at = self.expires_at.replace(tzinfo=timezone.utc) if self.expires_at.tzinfo is None else self.expires_at
+        return utc_now() >= expires_at
 
 
 class RideSession(db.Model):
@@ -93,10 +133,16 @@ class RideSession(db.Model):
     ended_at = db.Column(db.DateTime(timezone=True))
     last_record_at = db.Column(db.DateTime(timezone=True), nullable=False)
     record_count = db.Column(db.Integer, nullable=False, default=0)
+    first_seq = db.Column(db.BigInteger)
+    last_seq = db.Column(db.BigInteger)
+    sync_status = db.Column(db.String(20), nullable=False, default="syncing")
+    notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
 
     device = db.relationship("Device", back_populates="sessions")
     telemetry_records = db.relationship("TelemetryRecord", back_populates="ride_session")
+    sync_batches = db.relationship("SyncBatch", back_populates="ride_session")
 
 
 class TelemetryRecord(db.Model):
@@ -111,7 +157,9 @@ class TelemetryRecord(db.Model):
     ride_session_id = db.Column(db.Integer, db.ForeignKey("ride_sessions.id", ondelete="CASCADE"), nullable=False)
     session_id = db.Column(db.String(100), nullable=False)
     seq = db.Column(db.BigInteger, nullable=False)
-    timestamp = db.Column(db.DateTime(timezone=True), nullable=False)
+    timestamp = db.Column(db.DateTime(timezone=True))
+    device_time_ms = db.Column(db.BigInteger)
+    server_received_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utc_now)
     rpm = db.Column(db.Float)
     tps = db.Column(db.Float)
     ect = db.Column(db.Float)
@@ -127,11 +175,37 @@ class TelemetryRecord(db.Model):
 
     def to_dict(self) -> dict:
         return {
-            "session_id": self.session_id, "seq": self.seq, "timestamp": self.timestamp.isoformat(),
+            "session_id": self.session_id,
+            "seq": self.seq,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "device_time_ms": self.device_time_ms,
+            "server_received_at": self.server_received_at.isoformat() if self.server_received_at else None,
             "rpm": self.rpm, "tps": self.tps, "ect": self.ect, "iat": self.iat,
             "battery": self.battery, "injector_ms": self.injector_ms,
             "ignition_deg": self.ignition_deg, "raw_frame": self.raw_frame,
         }
+
+
+class SyncBatch(db.Model):
+    __tablename__ = "sync_batches"
+    __table_args__ = (
+        db.Index("ix_sync_batches_device_received", "device_id", "received_at"),
+        db.Index("ix_sync_batches_session_received", "ride_session_id", "received_at"),
+    )
+    id = db.Column(db.BigInteger().with_variant(db.Integer, "sqlite"), primary_key=True)
+    device_id = db.Column(db.Integer, db.ForeignKey("devices.id", ondelete="CASCADE"), nullable=False)
+    ride_session_id = db.Column(db.Integer, db.ForeignKey("ride_sessions.id", ondelete="CASCADE"), nullable=False)
+    batch_id = db.Column(db.String(100))
+    first_seq = db.Column(db.BigInteger)
+    last_seq = db.Column(db.BigInteger)
+    received_count = db.Column(db.Integer, nullable=False)
+    inserted_count = db.Column(db.Integer, nullable=False)
+    duplicate_count = db.Column(db.Integer, nullable=False)
+    received_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utc_now)
+    status = db.Column(db.String(20), nullable=False, default="accepted")
+
+    device = db.relationship("Device")
+    ride_session = db.relationship("RideSession", back_populates="sync_batches")
 
 
 class Vehicle(db.Model):

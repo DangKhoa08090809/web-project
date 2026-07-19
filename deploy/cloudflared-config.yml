@@ -1,0 +1,18 @@
+tunnel: 1ffec0ed-ce20-4d15-b83b-7362cd90a6af
+
+credentials-file: /etc/cloudflared/1ffec0ed-ce20-4d15-b83b-7362cd90a6af.json
+
+ingress:
+  - hostname: haithinh.top
+    service: http://localhost:80
+
+  - hostname: twave.haithinh.top
+    service: http://localhost:80
+
+  - hostname: hunglong.haithinh.top
+    service: http://localhost:80
+
+  - hostname: drisafe.haithinh.top
+    service: http://localhost:80
+
+  - service: http_status:404

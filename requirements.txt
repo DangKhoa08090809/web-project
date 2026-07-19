@@ -9,3 +9,4 @@ python-dotenv>=1.0,<2
 requests>=2.32,<3
 gunicorn>=23,<24
 google-genai>=1.0,<2
+redis>=5.0,<7

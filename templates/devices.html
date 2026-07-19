@@ -1,26 +1,102 @@
 {% extends "base.html" %}
 {% block title %}Devices · ECU Master{% endblock %}
 {% block content %}
-<section class="page-heading"><div><p class="eyebrow">Hardware access</p><h1>Devices</h1><p>Tokens are shown once and stored only as hashes.</p></div></section>
+<section class="page-heading"><div><p class="eyebrow">ECU reader management</p><h1>Devices</h1><p>Registered readers, synchronization state, and assigned vehicles.</p></div></section>
 {% if new_token %}
 <div class="alert success"><strong>Save this token now for {{ created_device.device_id }}.</strong><p>It cannot be recovered after leaving this page.</p><input class="token" readonly value="{{ new_token }}" onclick="this.select()"></div>
 {% endif %}
+{% if pairing_code %}
+<div class="alert success"><strong>Pairing code</strong><p>Expires at {{ pairing_code_row.expires_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC.</p><input class="token" readonly value="{{ pairing_code }}" onclick="this.select()"></div>
+{% endif %}
 {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
 <section class="two-column">
-    <article class="card">
-        <h2>Register a reader</h2>
-        <form method="post" class="stack-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <label>Device ID<input name="device_id" maxlength="64" placeholder="xiao-ecu-001" required></label>
-            <label>Device name<input name="device_name" maxlength="100" placeholder="Garage reader" required></label>
-            <label>Vehicle name<input name="vehicle_name" maxlength="100" placeholder="Civic EK" required></label>
-            <label>ECU type<input name="ecu_type" maxlength="100" placeholder="OBD-II / CAN" required></label>
-            <button class="primary" type="submit">Create device token</button>
-        </form>
-    </article>
+    <div class="list-stack">
+        <article class="card">
+            <h2>Pair new device</h2>
+            <form method="post" action="{{ url_for('dashboard.generate_pairing_code') }}" class="stack-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="primary" type="submit">Generate pairing code</button>
+            </form>
+        </article>
+        <article class="card">
+            <h2>Register manually</h2>
+            <form method="post" class="stack-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label>Device ID<input name="device_id" maxlength="64" placeholder="xiao-ecu-001" required></label>
+                <label>Device name<input name="device_name" maxlength="100" placeholder="Garage reader" required></label>
+                <label>Vehicle name<input name="vehicle_name" maxlength="100" placeholder="Civic EK" required></label>
+                <label>ECU type<input name="ecu_type" maxlength="100" placeholder="OBD-II / CAN" required></label>
+                <label>Firmware<input name="firmware_version" maxlength="100" placeholder="1.0.0"></label>
+                <label>Hardware<input name="hardware_version" maxlength="100" placeholder="xiao-esp32"></label>
+                <button class="primary" type="submit">Create device token</button>
+            </form>
+        </article>
+        <article class="card">
+            <h2>Active pairing codes</h2>
+            <div class="list-stack compact-list">
+            {% for code in active_pairing_codes %}
+                <div class="mini-row">
+                    <div><strong>#{{ code.id }}</strong><p class="muted">Expires {{ code.expires_at.strftime('%H:%M:%S') }} UTC · {{ code.attempt_count }} attempts</p></div>
+                    <form method="post" action="{{ url_for('dashboard.revoke_pairing_code', code_pk=code.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="secondary" type="submit">Revoke</button>
+                    </form>
+                </div>
+            {% else %}<p class="muted">No active pairing codes.</p>{% endfor %}
+            </div>
+        </article>
+    </div>
     <div class="list-stack">
     {% for device in devices %}
-        <article class="card list-card"><div><h2>{{ device.device_name }}</h2><p>{{ device.device_id }}</p><p class="muted">{{ device.vehicle_name }} · {{ device.ecu_type }}</p></div><span class="status {{ 'online' if device.is_active else 'idle' }}">{{ 'Enabled' if device.is_active else 'Disabled' }}</span></article>
+        <article class="card device-card">
+            <div class="card-title">
+                <div>
+                    <h2>{{ device.device_name }}</h2>
+                    <p>{{ device.device_id }}</p>
+                    {% set sync = sync_summary.get(device.id) %}
+                    <p class="muted">{{ device.vehicle_name }} · {{ device.ecu_type }}</p>
+                    <p class="muted">Last synchronization {{ sync.last_sync if sync else 'never' }}</p>
+                </div>
+                <span class="status {{ 'online' if device.is_active else 'idle' }}">{{ 'Enabled' if device.is_active else 'Disabled' }}</span>
+            </div>
+            {% set sync = sync_summary.get(device.id) %}
+            <dl class="detail-grid compact-details">
+                <div><dt>Assigned vehicle</dt><dd>{{ device.vehicle_name }}</dd></div>
+                <div><dt>Last uploaded session</dt><dd>{% if sync and sync.last_session_pk %}<a href="{{ url_for('dashboard.session_detail', session_pk=sync.last_session_pk) }}">{{ sync.last_session }}</a>{% else %}--{% endif %}</dd></div>
+                <div><dt>Firmware</dt><dd>{{ sync.firmware_version if sync else device.firmware_version or '--' }}</dd></div>
+                <div><dt>Configuration</dt><dd>{{ sync.configuration_version if sync else device.hardware_version or '--' }}</dd></div>
+                <div><dt>Pending uploads</dt><dd>{{ sync.pending_upload_count if sync else 0 }}</dd></div>
+                <div><dt>Error state</dt><dd>{{ sync.error_state if sync else '--' }}</dd></div>
+            </dl>
+            <form method="post" action="{{ url_for('dashboard.update_device', device_pk=device.id) }}" class="stack-form inline-grid">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label>Device name<input name="device_name" maxlength="100" value="{{ device.device_name }}" required></label>
+                <label>Vehicle name<input name="vehicle_name" maxlength="100" value="{{ device.vehicle_name }}" required></label>
+                <label>ECU type<input name="ecu_type" maxlength="100" value="{{ device.ecu_type }}" required></label>
+                <label>Firmware<input name="firmware_version" maxlength="100" value="{{ device.firmware_version or '' }}"></label>
+                <label>Hardware<input name="hardware_version" maxlength="100" value="{{ device.hardware_version or '' }}"></label>
+                <button class="secondary" type="submit">Save</button>
+            </form>
+            <div class="button-row">
+                <a class="secondary button" href="{{ url_for('dashboard.sessions') }}">Open Session History</a>
+                <form method="post" action="{{ url_for('dashboard.rotate_device_token_browser', device_pk=device.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="secondary" type="submit">Rotate token</button>
+                </form>
+                {% if device.is_active %}
+                <form method="post" action="{{ url_for('dashboard.disable_device', device_pk=device.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="danger" type="submit">Disable</button>
+                </form>
+                {% endif %}
+            </div>
+            <div class="recent-list">
+                <h3>Recent sessions</h3>
+                {% for session in recent_sessions[device.id] %}
+                    <p><a href="{{ url_for('dashboard.session_detail', session_pk=session.id) }}">{{ session.session_id }}</a> · {{ session.record_count }} records · {{ session.sync_status }}</p>
+                {% else %}<p class="muted">No sessions yet.</p>{% endfor %}
+            </div>
+        </article>
     {% else %}<article class="card empty"><p>No registered devices.</p></article>{% endfor %}
     </div>
 </section>

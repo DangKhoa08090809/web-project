@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Tool · ECU Master{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Technical inspection</p>
+        <h1>Tool</h1>
+        <p>Session playback for uploaded ECU data.</p>
+    </div>
+</section>
+
+<section class="card tool-shell" id="tool-app">
+    <div class="filter-grid">
+        <label>Uploaded session
+            <select id="tool-session">
+                {% for session in sessions %}
+                <option value="{{ session.id }}">{{ session.session_id }} · {{ session.vehicle }} · {{ session.start_time }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Jump to anomaly event
+            <select id="tool-event">
+                <option value="">No event selected</option>
+            </select>
+        </label>
+        <label>Jump to timestamp
+            <input id="tool-time" type="number" min="0" step="0.1" placeholder="Elapsed seconds">
+        </label>
+        <button class="primary" id="tool-load" type="button">Load session</button>
+    </div>
+
+    <div class="playback-bar">
+        <button class="secondary icon-button" id="previous-sample" type="button" aria-label="Previous sample">‹</button>
+        <button class="primary icon-button" id="play-toggle" type="button" aria-label="Play session playback">▶</button>
+        <button class="secondary icon-button" id="next-sample" type="button" aria-label="Next sample">›</button>
+        <label>Speed
+            <select id="playback-speed">
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1x</option>
+                <option value="2">2x</option>
+                <option value="5">5x</option>
+                <option value="10">10x</option>
+            </select>
+        </label>
+        <label class="timeline-label">Timeline
+            <input id="sample-slider" type="range" min="0" max="0" value="0">
+        </label>
+        <output id="sample-position">--</output>
+    </div>
+
+    <div class="tool-grid">
+        <article class="tool-panel">
+            <div class="tool-panel-head">
+                <div>
+                    <p class="eyebrow">Decoded parameters</p>
+                    <h2>Selected sample</h2>
+                </div>
+                <div class="button-row">
+                    <label class="check"><input id="filter-invalid" type="checkbox"> Invalid only</label>
+                    <label class="check"><input id="filter-changed" type="checkbox"> Changed only</label>
+                    <button class="secondary" id="reset-minmax" type="button">Reset min/max</button>
+                </div>
+            </div>
+            <label class="search-label">Search parameters
+                <input id="parameter-search" placeholder="RPM, battery, injector">
+            </label>
+            <div class="table-wrap parameter-table-wrap">
+                <table>
+                    <thead><tr><th>Parameter</th><th>Value</th><th>Unit</th><th>Minimum</th><th>Maximum</th><th>Raw field</th><th>Decode</th><th>Validity</th></tr></thead>
+                    <tbody id="parameter-table"><tr><td colspan="8" class="empty">No session loaded.</td></tr></tbody>
+                </table>
+            </div>
+        </article>
+
+        <article class="tool-panel">
+            <div class="tool-panel-head">
+                <div>
+                    <p class="eyebrow">Raw frame inspector</p>
+                    <h2>Frame data</h2>
+                </div>
+                <div class="button-row">
+                    <button class="secondary" id="copy-frame" type="button">Copy raw frame</button>
+                    <button class="secondary" id="download-sample" type="button">Download sample</button>
+                    <button class="secondary" id="toggle-radix" type="button">Hex</button>
+                </div>
+            </div>
+            <dl class="detail-grid compact-details">
+                <div><dt>Timestamp</dt><dd data-tool-field="timestamp">--</dd></div>
+                <div><dt>Sequence</dt><dd data-tool-field="seq">--</dd></div>
+                <div><dt>Frame length</dt><dd data-tool-field="raw_length">--</dd></div>
+                <div><dt>Checksum</dt><dd data-tool-field="checksum">--</dd></div>
+            </dl>
+            <pre class="raw-frame" id="tool-raw-frame">--</pre>
+            <div class="table-wrap parsed-table-wrap">
+                <table>
+                    <thead><tr><th>Parsed field</th><th>Value</th></tr></thead>
+                    <tbody id="parsed-fields"><tr><td colspan="2" class="empty">No parsed raw fields available.</td></tr></tbody>
+                </table>
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboardApi.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tool.js') }}"></script>
+{% endblock %}

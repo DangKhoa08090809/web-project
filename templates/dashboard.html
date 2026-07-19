@@ -1,27 +1,124 @@
 {% extends "base.html" %}
-{% block title %}Dashboard · ECU Master{% endblock %}
+{% block title %}Overview · ECU Master{% endblock %}
 {% block content %}
-<section class="hero">
-    <div><p class="eyebrow">Fleet overview</p><h1>Good to see you, {{ current_user.full_name }}.</h1><p>Latest readings from authenticated ECU devices.</p></div>
-    <a class="primary button" href="{{ url_for('dashboard.devices') }}">Add a device</a>
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Historical ECU analysis</p>
+        <h1>Overview</h1>
+        <p>Uploaded ride sessions, cautious anomaly screening, and ECU reader synchronization status.</p>
+    </div>
+    <a class="primary button" href="{{ url_for('dashboard.sessions') }}">Browse sessions</a>
 </section>
-{% if devices %}
-<section class="device-grid">
-{% for device in devices %}
-    {% set reading = latest.get(device.id) %}
-    <article class="card device-card">
-        <div class="card-title"><div><h2>{{ device.device_name }}</h2><p>{{ device.vehicle_name }} · {{ device.ecu_type }}</p></div><span class="status {{ 'online' if device.is_active and device.last_seen_at else 'idle' }}">{{ 'Active' if device.is_active else 'Disabled' }}</span></div>
-        <dl class="metrics">
-            <div><dt>RPM</dt><dd>{{ reading.rpm|round|int if reading and reading.rpm is not none else '—' }}</dd></div>
-            <div><dt>TPS</dt><dd>{{ (reading.tps|string + '%') if reading and reading.tps is not none else '—' }}</dd></div>
-            <div><dt>Coolant</dt><dd>{{ (reading.ect|string + '°C') if reading and reading.ect is not none else '—' }}</dd></div>
-            <div><dt>Battery</dt><dd>{{ (reading.battery|string + ' V') if reading and reading.battery is not none else '—' }}</dd></div>
-        </dl>
-        <p class="muted">ID {{ device.device_id }} · Last seen {{ device.last_seen_at.strftime('%Y-%m-%d %H:%M UTC') if device.last_seen_at else 'never' }}</p>
+
+<section class="summary-grid">
+    {% for card in summary_cards %}
+    <article class="summary-card">
+        <span>{{ card.label }}</span>
+        <strong>{{ card.value }}</strong>
+        <p>{{ card.hint }}</p>
     </article>
-{% endfor %}
+    {% endfor %}
+</section>
+
+{% if latest_session %}
+<section class="dashboard-grid">
+    <article class="card feature-card">
+        <div class="card-title">
+            <div>
+                <p class="eyebrow">Latest diagnostic result</p>
+                <h2>Latest diagnosis: {{ latest_session.result }}</h2>
+            </div>
+            <span class="badge {{ latest_session.result|lower|replace(' ', '-') }}">{{ latest_session.result }}</span>
+        </div>
+        <dl class="detail-grid">
+            <div><dt>Session</dt><dd><a href="{{ url_for('dashboard.session_detail', session_pk=latest_session.id) }}">{{ latest_session.session_id }}</a></dd></div>
+            <div><dt>Uploaded</dt><dd>{{ latest_session.upload_time }}</dd></div>
+            <div><dt>Duration</dt><dd>{{ latest_session.duration_label }}</dd></div>
+            <div><dt>Samples</dt><dd>{{ latest_session.sample_count }}</dd></div>
+            <div><dt>Maximum anomaly score</dt><dd>{{ '%.2f'|format(latest_session.max_anomaly_score) if latest_session.max_anomaly_score is not none else '--' }}</dd></div>
+            <div><dt>Anomalous sample ratio</dt><dd>{{ '%.1f%%'|format(latest_session.anomalous_sample_percentage) if latest_session.anomalous_sample_percentage is not none else '--' }}</dd></div>
+        </dl>
+        <p class="muted">Primary signals requiring attention: {{ latest_session.main_signals|join(', ') if latest_session.main_signals else 'None detected in available decoded parameters' }}.</p>
+        <p class="caution">Isolation Forest-style anomaly detection and local screening identify unusual data patterns. They do not prove that a component has failed.</p>
+    </article>
+
+    <article class="card">
+        <div class="card-title">
+            <div>
+                <p class="eyebrow">Recent anomaly events</p>
+                <h2>Grouped events</h2>
+            </div>
+        </div>
+        <div class="list-stack compact-list">
+            {% for event in recent_events %}
+            <a class="event-row" href="{{ url_for('dashboard.session_detail', session_pk=event.session_pk) }}#{{ event.id }}">
+                <span class="badge {{ event.severity|lower|replace(' ', '-') }}">{{ event.severity }}</span>
+                <div>
+                    <strong>{{ event.session_id }}</strong>
+                    <p>{{ event.duration_label }} · {{ event.title }} · max {{ '%.2f'|format(event.max_anomaly_score) }}</p>
+                </div>
+            </a>
+            {% else %}
+            <p class="muted">No grouped anomaly events were detected in recent uploaded sessions.</p>
+            {% endfor %}
+        </div>
+    </article>
 </section>
 {% else %}
-<section class="empty card"><h2>No devices yet</h2><p>Create a reader and copy its one-time token to your ESP/XIAO firmware.</p><a class="primary button" href="{{ url_for('dashboard.devices') }}">Create first device</a></section>
+<section class="empty card">
+    <h2>No uploaded sessions yet</h2>
+    <p>Durable ride sessions will appear here after an ECU reader uploads stored data.</p>
+    <a class="primary button" href="{{ url_for('dashboard.devices') }}">Register a device</a>
+</section>
 {% endif %}
+
+<section class="two-column balanced">
+    <article class="card">
+        <p class="eyebrow">Recent diagnoses</p>
+        <h2>Analyzed sessions</h2>
+        <div class="overview-list">
+            {% for item in recent_diagnoses %}
+            <a class="overview-row" href="{{ url_for('dashboard.session_detail', session_pk=item.id) }}">
+                <div>
+                    <strong>{{ item.session_id }}</strong>
+                    <p>{{ item.vehicle }} · {{ item.device }}</p>
+                    <p>{{ item.start_time }} · {{ item.duration_label }}</p>
+                </div>
+                <div class="overview-row-metrics">
+                    <span class="badge {{ item.result|lower|replace(' ', '-') }}">{{ item.result }}</span>
+                    <span>Max {{ '%.2f'|format(item.max_anomaly_score) if item.max_anomaly_score is not none else '--' }}</span>
+                    <span>{{ '%.1f%%'|format(item.anomalous_sample_percentage) if item.anomalous_sample_percentage is not none else '--' }} anomalous</span>
+                    <span>{{ item.event_count }} events</span>
+                </div>
+            </a>
+            {% else %}
+            <p class="muted">No analyzed sessions yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="card">
+        <p class="eyebrow">Device synchronization</p>
+        <h2>Reader state</h2>
+        <div class="overview-list">
+            {% for device in device_sync %}
+            <div class="overview-row">
+                <div>
+                    <strong>{{ device.device_name }}</strong>
+                    <p>{{ device.device_id }} · firmware {{ device.firmware_version }}</p>
+                    <p>Last sync {{ device.last_sync }}</p>
+                </div>
+                <div class="overview-row-metrics">
+                    <span class="badge {{ 'offline' if device.state == 'Offline' else 'normal' }}">{{ device.state }}</span>
+                    <span>{% if device.last_session_pk %}<a href="{{ url_for('dashboard.session_detail', session_pk=device.last_session_pk) }}">{{ device.last_session }}</a>{% else %}No sessions{% endif %}</span>
+                    <span>{{ device.pending_upload_count }} pending</span>
+                    <span>{{ device.error_state }}</span>
+                </div>
+            </div>
+            {% else %}
+            <p class="muted">No registered devices.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
 {% endblock %}

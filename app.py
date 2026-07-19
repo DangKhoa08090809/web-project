@@ -7,8 +7,9 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from flask_wtf.csrf import CSRFError
-from sqlalchemy import select
+from sqlalchemy import select, text
 from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import Config
 from extensions import csrf, db, login_manager, migrate
@@ -17,6 +18,7 @@ from routes.auth import auth_bp
 from routes.dashboard import dashboard_bp
 from routes.ingest import ingest_bp
 from routes.vehicles import vehicles_bp
+from services.live import get_live_backend
 
 
 load_dotenv(Path(__file__).with_name(".env"))
@@ -29,6 +31,8 @@ def create_app(test_config=None):
         app.config.update(test_config)
     else:
         Config.validate()
+    if app.config.get("TRUST_PROXY"):
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
     Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
     db.init_app(app)
@@ -48,6 +52,27 @@ def create_app(test_config=None):
     register_legacy_routes(app)
     register_cli(app)
     register_errors(app)
+
+    @app.get("/health")
+    def health():
+        database_status = "ok"
+        redis_status = "ok"
+        status_code = 200
+        try:
+            db.session.execute(text("SELECT 1"))
+        except Exception:
+            database_status = "error"
+            status_code = 503
+            app.logger.exception("Health check failed")
+        live_backend = get_live_backend()
+        redis_ok, redis_status = live_backend.health()
+        if not redis_ok:
+            status_code = 503
+        return jsonify({
+            "status": "ok" if status_code == 200 else "error",
+            "database": database_status,
+            "redis": redis_status,
+        }), status_code
 
     @app.after_request
     def security_headers(response):
@@ -78,17 +103,20 @@ def register_login(app):
 
 def register_legacy_routes(app):
     pages = {
-        "/classic": ("classic", "index.html"),
-        "/live": ("live", "liveData.html"),
         "/errors": ("errors", "errorCodes.html"),
         "/vehicle": ("vehicle", "vehicleInfo.html"),
         "/maintenance": ("maintenance", "maintenance.html"),
-        "/settings": ("settings", "settings.html"),
     }
     for rule, (endpoint, template) in pages.items():
         def view(template_name=template):
             return render_template(template_name)
         app.add_url_rule(rule, endpoint, login_required(view))
+
+    @app.get("/classic")
+    @login_required
+    def classic():
+        return redirect(url_for("dashboard.tool"))
+
 
     app.extensions["latest_analysis"] = {}
 
@@ -188,13 +216,13 @@ def register_errors(app):
     @app.errorhandler(CSRFError)
     def csrf_error(error):
         if request.path.startswith("/api/") or request.is_json:
-            return jsonify({"error": "CSRF token is missing or invalid"}), 400
+            return jsonify({"ok": False, "error": {"code": "INVALID_CSRF", "message": "CSRF token is missing or invalid"}}), 400
         return render_template("error.html", message="Your form expired. Please go back and try again."), 400
 
     @app.errorhandler(RequestEntityTooLarge)
     def too_large(error):
         if request.path.startswith("/api/"):
-            return jsonify({"error": "Request body is too large"}), 413
+            return jsonify({"ok": False, "error": {"code": "REQUEST_TOO_LARGE", "message": "Request body is too large"}}), 413
         return render_template("error.html", message="The submitted request is too large."), 413
 
 

@@ -1,39 +1,9 @@
-<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>OBD2 Master</title>
-        <link
-            rel="stylesheet"
-            href="{{ url_for('static', filename='css/liveData.css') }}"
-        />
-    </head>
-
-    <body>
-        <header>
-            <div class="mainContainer">
-                <div class="btnArea">
-                    <a href="/"><span class="arrow"></span></a>
-                </div>
-                <div class="textArea">
-                    <h1><span class="orange">Live</span> Data</h1>
-                </div>
-                <div class="connectionArea"></div>
-            </div>
-        </header>
-        <main>
-            <div class="mainContainer">
-                <div class="statusBox" id="statusBox">
-                    <h1 id="status">Waiting Live Data...</h1>
-                </div>
-                <div class="statusBoxx">
-                    <div class="vehicleInfoBox" id="vehicleInfo"></div>
-                    <div class="dataBox" id="dataBox"></div>
-                </div>
-            </div>
-        </main>
-    </body>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="static/js/logic.js"></script>
-</html>
+{% extends "base.html" %}
+{% block title %}Historical Sessions · ECU Master{% endblock %}
+{% block content %}
+<section class="empty card">
+    <h1>Historical sessions</h1>
+    <p>The cloud dashboard reviews uploaded ride sessions rather than live driving data.</p>
+    <a class="primary button" href="{{ url_for('dashboard.sessions') }}">Open sessions</a>
+</section>
+{% endblock %}

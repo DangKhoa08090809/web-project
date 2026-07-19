@@ -1,21 +1,180 @@
 {% extends "base.html" %}
 {% block title %}{{ session.session_id }} · ECU Master{% endblock %}
-{% block head %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js" defer></script>
+{% endblock %}
 {% block content %}
-<section class="page-heading"><div><p class="eyebrow">{{ session.device.device_name }} · {{ session.device.vehicle_name }}</p><h1>{{ session.session_id }}</h1><p>{{ session.record_count }} records · {{ session.started_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p></div></section>
-<section class="card chart-card"><canvas id="telemetryChart" height="110"></canvas></section>
-<section class="card table-card"><div class="table-wrap"><table><thead><tr><th>Seq</th><th>Timestamp</th><th>RPM</th><th>TPS</th><th>ECT</th><th>Battery</th></tr></thead><tbody>
-{% for record in records[-100:] %}<tr><td>{{ record.seq }}</td><td>{{ record.timestamp.strftime('%H:%M:%S.%f')[:-3] }}</td><td>{{ record.rpm if record.rpm is not none else '—' }}</td><td>{{ record.tps if record.tps is not none else '—' }}</td><td>{{ record.ect if record.ect is not none else '—' }}</td><td>{{ record.battery if record.battery is not none else '—' }}</td></tr>{% endfor %}
-</tbody></table></div>{% if records|length > 100 %}<p class="table-note">Showing the latest 100 rows; chart includes up to 5,000.</p>{% endif %}</section>
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">{{ session.device.device_name }} · {{ session.device.vehicle_name }}</p>
+        <h1>{{ session.session_id }}</h1>
+        <p>{{ summary.sample_count }} samples · {{ summary.processing_state }} · uploaded {{ summary.upload_time }}</p>
+    </div>
+    <div class="button-row">
+        <a class="secondary button" href="{{ csv_url }}">Download CSV</a>
+        <a class="secondary button" href="{{ json_url }}">Download JSON</a>
+    </div>
+</section>
+
+<section class="card feature-card">
+    <div class="card-title">
+        <div>
+            <p class="eyebrow">Session header</p>
+            <h2>{{ summary.result }}</h2>
+        </div>
+        <span class="badge {{ summary.result|lower|replace(' ', '-') }}">{{ summary.result }}</span>
+    </div>
+    <dl class="detail-grid">
+        <div><dt>Vehicle</dt><dd>{{ summary.vehicle }}</dd></div>
+        <div><dt>Device</dt><dd>{{ summary.device }} · {{ summary.device_id }}</dd></div>
+        <div><dt>Start</dt><dd>{{ summary.start_time }}</dd></div>
+        <div><dt>End</dt><dd>{{ summary.end_time }}</dd></div>
+        <div><dt>Duration</dt><dd>{{ summary.duration_label }}</dd></div>
+        <div><dt>Sample count</dt><dd>{{ summary.sample_count }}</dd></div>
+        <div><dt>Sampling frequency</dt><dd>{{ '%.2f Hz'|format(summary.sample_count / summary.duration_seconds) if summary.duration_seconds else '--' }}</dd></div>
+        <div><dt>Upload time</dt><dd>{{ summary.upload_time }}</dd></div>
+        <div><dt>Processing status</dt><dd>{{ summary.processing_state }}</dd></div>
+        <div><dt>Model version</dt><dd>{{ summary.model_version }}</dd></div>
+    </dl>
+    <form id="session-notes" method="post" action="{{ url_for('dashboard.update_session_notes', session_pk=session.id) }}" class="notes-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label>User notes<textarea name="notes" rows="3" placeholder="Ride context, maintenance, rider observations">{{ session.notes or '' }}</textarea></label>
+        <button class="secondary" type="submit">Save notes</button>
+    </form>
+</section>
+
+<section class="dashboard-grid">
+    <article class="card">
+        <div class="card-title">
+            <div>
+                <p class="eyebrow">Statistical summary</p>
+                <h2>Decoded parameters</h2>
+            </div>
+        </div>
+        <div class="stats-grid">
+            {% for key, item in statistics.items() if key != '_quality' %}
+            <div class="stat-block">
+                <strong>{{ item.label }}</strong>
+                <span>Min {{ item.minimum|round(item.precision) }} {{ item.unit }}</span>
+                <span>Max {{ item.maximum|round(item.precision) }} {{ item.unit }}</span>
+                <span>Mean {{ item.mean|round(item.precision) }} {{ item.unit }}</span>
+                <span>Std {{ item.stddev|round(item.precision) }} {{ item.unit }}</span>
+            </div>
+            {% else %}
+            <p class="muted">No decoded numeric ECU parameters are available for this session.</p>
+            {% endfor %}
+        </div>
+        <dl class="detail-grid compact-details">
+            <div><dt>Missing samples</dt><dd>{{ statistics['_quality'].missing_samples }} ({{ '%.1f%%'|format(statistics['_quality'].missing_sample_percentage) }})</dd></div>
+            <div><dt>Invalid frames</dt><dd>{{ statistics['_quality'].invalid_frame_count }}</dd></div>
+            <div><dt>Checksum failures</dt><dd>{{ statistics['_quality'].checksum_failure_count }}</dd></div>
+            <div><dt>Anomalous samples</dt><dd>{{ analysis.anomalous_sample_count }} ({{ '%.1f%%'|format(analysis.anomalous_sample_percentage) if analysis.anomalous_sample_percentage is not none else '--' }})</dd></div>
+        </dl>
+    </article>
+
+    <article class="card">
+        <div class="card-title">
+            <div>
+                <p class="eyebrow">Anomaly timeline</p>
+                <h2>Grouped events</h2>
+            </div>
+            <span class="badge {{ analysis.result|lower|replace(' ', '-') }}">{{ analysis.result }}</span>
+        </div>
+        <div id="event-list" class="list-stack compact-list">
+            {% for event in analysis.events %}
+            <button class="event-row event-button" id="{{ event.id }}" type="button" data-start="{{ event.start_elapsed }}" data-end="{{ event.end_elapsed }}">
+                <span class="badge {{ event.severity|lower|replace(' ', '-') }}">{{ event.severity }}</span>
+                <div>
+                    <strong>{{ event.title }}</strong>
+                    <p>{{ event.duration_label }} · max {{ '%.2f'|format(event.max_anomaly_score) }} · {{ event.signals|join(', ') }}</p>
+                </div>
+            </button>
+            {% else %}
+            <p class="muted">No grouped anomaly events were detected in available telemetry.</p>
+            {% endfor %}
+        </div>
+        <aside id="event-detail" class="event-detail">
+            <strong>Event details</strong>
+            <p>Select an event to focus the charts and inspect cautious diagnostic guidance.</p>
+        </aside>
+    </article>
+</section>
+
+<section class="card chart-workbench" id="session-workbench" data-samples-url="{{ samples_url }}">
+    <div class="chart-toolbar">
+        <div>
+            <p class="eyebrow">Synchronized historical charts</p>
+            <h2>Session timeline</h2>
+        </div>
+        <div class="button-row">
+            <button class="secondary" type="button" data-window="30">30s</button>
+            <button class="secondary" type="button" data-window="60">1m</button>
+            <button class="secondary" type="button" data-window="300">5m</button>
+            <button class="secondary" type="button" data-window="all">All</button>
+            <button class="secondary" id="reset-zoom" type="button">Reset zoom</button>
+        </div>
+    </div>
+    <div id="signal-toggles" class="toggle-grid" aria-label="Chart signal toggles"></div>
+    <div id="chart-state" class="empty subtle">Loading session samples...</div>
+    <div id="charts" class="chart-stack"></div>
+</section>
+
+<section class="card table-card raw-records-card">
+    <div class="section-pad">
+        <p class="eyebrow">Raw and decoded data</p>
+        <h2>Latest bounded records</h2>
+        <p class="muted">Showing at most 30 records to keep large sessions readable.</p>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Seq</th><th>Timestamp</th><th>Device ms</th><th>RPM</th><th>TPS</th><th>ECT</th><th>IAT</th><th>Battery</th><th>Raw frame</th></tr></thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td>{{ record.seq }}</td>
+                    <td>{{ record.timestamp }}</td>
+                    <td>{{ record.device_time_ms }}</td>
+                    <td>{{ record.rpm }}</td>
+                    <td>{{ record.tps }}</td>
+                    <td>{{ record.ect }}</td>
+                    <td>{{ record.iat }}</td>
+                    <td>{{ record.battery }}</td>
+                    <td><code>{{ record.raw_frame }}</code></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="9" class="empty">No telemetry records were stored for this session.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="raw-record-list">
+        {% for record in records %}
+        <article class="raw-record-card">
+            <div class="raw-record-head">
+                <strong>#{{ record.seq }}</strong>
+                <span>{{ record.timestamp }}</span>
+            </div>
+            <dl>
+                <div><dt>RPM</dt><dd>{{ record.rpm }}</dd></div>
+                <div><dt>TPS</dt><dd>{{ record.tps }}</dd></div>
+                <div><dt>ECT</dt><dd>{{ record.ect }}</dd></div>
+                <div><dt>IAT</dt><dd>{{ record.iat }}</dd></div>
+                <div><dt>Battery</dt><dd>{{ record.battery }}</dd></div>
+                <div><dt>Device ms</dt><dd>{{ record.device_time_ms }}</dd></div>
+            </dl>
+            <code>{{ record.raw_frame }}</code>
+        </article>
+        {% else %}
+        <p class="empty">No telemetry records were stored for this session.</p>
+        {% endfor %}
+    </div>
+</section>
 {% endblock %}
 {% block scripts %}
 <script>
-window.addEventListener("load", () => {
-  const rows = {{ chart_data|tojson }};
-  new Chart(document.getElementById("telemetryChart"), {type: "line", data: {labels: rows.map(r => r.timestamp), datasets: [
-    {label: "RPM", data: rows.map(r => r.rpm), borderColor: "#0969da", yAxisID: "y", pointRadius: 0},
-    {label: "ECT °C", data: rows.map(r => r.ect), borderColor: "#f59e0b", yAxisID: "temperature", pointRadius: 0}
-  ]}, options: {responsive: true, interaction: {mode: "index", intersect: false}, scales: {temperature: {position: "right", grid: {drawOnChartArea: false}}}}});
-});
+window.sessionAnalysis = {{ analysis|tojson }};
 </script>
+<script src="{{ url_for('static', filename='js/dashboardApi.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sessionDetail.js') }}"></script>
 {% endblock %}

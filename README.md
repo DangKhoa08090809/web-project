@@ -1,20 +1,55 @@
-# ECU Master Dashboard
+# DriSafe ECU Reader Server
 
-A Flask foundation for authenticated ECU telemetry from ESP/XIAO readers. It supports PostgreSQL in production, SQLite for local development, browser authentication, hashed device tokens, live HTTP ingestion, idempotent offline uploads, ride sessions, and chart-ready session data.
+Flask server for authenticated ECU telemetry from ESP/XIAO reader nodes. Each node is one owned `Device`; users manage devices in the dashboard, generate short-lived pairing codes, and devices upload offline logs over HTTPS with idempotent acknowledgements.
 
-## Local setup
+The firmware is out of scope for this repository. Device-to-server communication is HTTPS only.
 
-Python 3.11+ is recommended.
+## Dashboard Purpose
 
-```bash
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env                 # Windows: copy .env.example .env
+The public web dashboard is a historical session analysis and device-management surface. The motorcycle ECU data path is:
+
+```text
+Motorcycle ECU -> XIAO ESP32S3 -> local ride-session storage -> HTTPS upload when Internet is available -> backend storage -> analysis dashboard
 ```
 
-Replace `SECRET_KEY` in `.env` (for example, generate one with `python -c "import secrets; print(secrets.token_hex(32))"`). Leave `DATABASE_URL` commented to use SQLite, then initialize and run:
+The cloud dashboard is not a live driving dashboard. It reviews uploaded sessions, recent diagnostic results, decoded ECU charts, grouped anomaly events, comparison views, raw/sample inspection, and registered ECU reader devices. Live driving gauges, failure prediction, remaining-useful-life prediction, automatic definitive fault identification, firmware flashing, and ECU reverse-engineering changes are out of scope here.
+
+Main navigation:
+
+```text
+Overview
+Sessions
+AI Analysis
+Compare
+Tool
+Devices
+Settings
+```
+
+`Tool` replaces the previous Classic Tool entry and works against uploaded sessions with historical playback.
+
+## Architecture
+
+- Flask application factory with Flask-Login, CSRF-protected browser forms, Flask-Migrate/Alembic, and SQLAlchemy models.
+- PostgreSQL in production and SQLite for local development.
+- Browser users own devices and ride sessions; admins can view and manage all devices and sessions.
+- Pairing codes are short-lived, single-use, and stored only as hashes.
+- Device API authentication uses `X-Device-ID` plus `Authorization: Bearer <device-token>`.
+- Telemetry uniqueness is enforced by `(device database id, session_id, seq)`.
+- Upload acknowledgements are computed from stored database rows after duplicate-safe inserts.
+- Dashboard analysis helpers compute session statistics, downsample chart payloads, group consecutive abnormal samples into events, and keep diagnostic wording cautious.
+- If embedded ML scores are present in stored raw-frame metadata, the dashboard uses them. Otherwise it labels results as local statistical screening; it does not claim an external Isolation Forest result when the ML API is unavailable.
+
+## Local Setup
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
+
+Set a stable `SECRET_KEY` in `.env`, then initialize and run:
 
 ```bash
 flask --app app db upgrade
@@ -22,130 +57,379 @@ flask --app app create-user --admin
 flask --app app run --debug
 ```
 
-Open <http://127.0.0.1:5000>. The dashboard, device and session pages require login. Existing simulator/analyze, maintenance, error, vehicle, and settings pages remain under **Classic tools** and are protected too.
+Open <http://127.0.0.1:5000>.
 
-To generate development telemetry, put a registered `DEVICE_ID` and its one-time `DEVICE_TOKEN` in `.env`, then run `python simu.py`.
+## Environment
 
-Do not use `db.create_all()` for normal setup. Schema changes should use:
+Important variables:
+
+```dotenv
+APP_ENV=development
+SECRET_KEY=replace-with-a-long-random-value
+DATABASE_URL=
+MAX_CONTENT_LENGTH=2097152
+MAX_LOG_RECORDS=1000
+RAW_FRAME_MAX_BYTES=16384
+REDIS_URL=
+LIVE_REDIS_REQUIRED=
+LIVE_SAMPLE_TTL_SECONDS=15
+LIVE_RATE_LIMIT_PER_SECOND=5
+LIVE_RATE_LIMIT_BURST=10
+LIVE_MAX_REQUEST_BYTES=4096
+LIVE_SSE_HEARTBEAT_SECONDS=15
+LIVE_RAW_FRAME_MAX_CHARS=256
+ML_API_BASE_URL=
+ML_API_TIMEOUT_SECONDS=2.5
+ML_MODEL_NAME=Isolation Forest
+ML_MODEL_VERSION=
+ML_TRAINING_DATA_VERSION=
+ML_FEATURE_SCHEMA_VERSION=
+ML_DETECTION_THRESHOLD=
+PAIRING_CODE_TTL_SECONDS=900
+PAIRING_MAX_ATTEMPTS=10
+SESSION_COOKIE_SECURE=false
+TRUST_PROXY=false
+TRUSTED_HOSTS=
+```
+
+When `APP_ENV=production`, `SECRET_KEY` and PostgreSQL settings are required. Production defaults also enable secure cookies, HTTPS URL generation, and proxy header support.
+
+`ML_API_BASE_URL` is optional. When it is empty, the AI Analysis page reports `ML API unavailable` and re-analysis requests return a failed state with a clear configuration message. When it is set, the dashboard probes `<ML_API_BASE_URL>/health` for availability and displays any reported model metadata fields. A persisted FastAPI re-analysis contract is not implemented in this repository yet.
+
+## Database Migrations
+
+Do not use `db.create_all()` for production.
 
 ```bash
+flask --app app db upgrade
+# After model changes:
 flask --app app db migrate -m "describe change"
 flask --app app db upgrade
 ```
 
-## Users and devices
+The current schema includes users, devices, pairing codes, ride sessions, telemetry records, and sync batch diagnostics.
 
-Create users from the trusted server console. Passwords must have at least 12 characters and are stored with Werkzeug's password hash:
+## Users
 
-```bash
-flask --app app create-user --email admin@example.com --name "ECU Admin" --admin
-```
-
-After login, use **Devices → Register a reader**. The device token is displayed once; only its SHA-256 hash is stored. Tokens are high-entropy random credentials. A normal user sees only their own devices; an admin can view all users' devices.
-
-The same flow is available via JSON. This complete curl example obtains a CSRF token, logs in, and creates a device (requires `jq`):
+Create the first admin from a trusted shell:
 
 ```bash
-CSRF=$(curl -s -c cookies.txt http://localhost:5000/auth/csrf | jq -r .csrf_token)
-LOGIN=$(curl -s -b cookies.txt -c cookies.txt \
-  -H "Content-Type: application/json" -H "X-CSRFToken: $CSRF" \
-  -d '{"email":"admin@example.com","password":"your-long-password"}' \
-  http://localhost:5000/auth/login)
-CSRF=$(printf '%s' "$LOGIN" | jq -r .csrf_token)
-
-curl -s -b cookies.txt \
-  -H "Content-Type: application/json" -H "X-CSRFToken: $CSRF" \
-  -d '{"device_id":"xiao-ecu-001","device_name":"Garage reader","vehicle_name":"Civic EK","ecu_type":"OBD-II CAN"}' \
-  http://localhost:5000/api/devices
+flask --app app create-user --email admin@example.com --name "DriSafe Admin" --admin
 ```
 
-Copy the returned `device.token` immediately. It is never returned by later GET requests.
+Passwords are hashed with Werkzeug. Login failures use the same message for unknown accounts and bad passwords.
 
-## ESP/XIAO HTTP ingestion
+## Pairing A Node
 
-Every device request requires both headers:
+1. Log in to `https://drisafe.haithinh.top`.
+2. Open Devices.
+3. Generate a pairing code.
+4. Enter that code into the ESP configuration portal.
+5. The node calls the pairing API and stores the returned device token.
 
-```text
-X-Device-ID: xiao-ecu-001
-Authorization: Bearer <device_token>
-```
-
-Send one live record:
+Pairing request:
 
 ```bash
-curl -X POST http://localhost:5000/api/telemetry \
+curl -X POST "https://drisafe.haithinh.top/api/device/pair" \
   -H "Content-Type: application/json" \
-  -H "X-Device-ID: xiao-ecu-001" \
-  -H "Authorization: Bearer $DEVICE_TOKEN" \
   -d '{
-    "session_id":"ride-2026-07-06-001",
-    "seq":1,
-    "timestamp":"2026-07-06T14:01:02.125Z",
-    "rpm":2450,"tps":18.5,"ect":88.2,"iat":32.1,"battery":13.9,
-    "injector_ms":3.4,"ignition_deg":16.0,"raw_frame":"7E8 08 04 41 0C 26 48"
+    "pairing_code": "ABCD-EFGH-JKLM-NPQR",
+    "device_id": "ecu-abc123",
+    "device_name": "ECU Reader",
+    "vehicle_name": "Test Motorcycle",
+    "ecu_type": "Unknown ECU",
+    "firmware_version": "1.0.0",
+    "hardware_version": "xiao-esp32"
   }'
 ```
 
-Success is HTTP `201` with `{"inserted":1,"skipped":0,...}`. A retry of the same `(device_id, session_id, seq)` is safe and returns an inserted count of zero. Valid traffic updates the device's `last_seen_at`.
+Success returns `Cache-Control: no-store` and the permanent token exactly once:
 
-Upload an offline batch:
+```json
+{
+  "ok": true,
+  "device": {
+    "device_id": "ecu-abc123",
+    "device_name": "ECU Reader"
+  },
+  "device_token": "one-time-visible-secret"
+}
+```
+
+The database stores only token and pairing-code hashes.
+
+## Device Authentication
+
+All device telemetry endpoints require:
+
+```text
+X-Device-ID: ecu-abc123
+Authorization: Bearer DEVICE_TOKEN
+```
+
+Inactive devices are rejected immediately. Token rotation is available from the Devices page or:
 
 ```bash
-curl -X POST http://localhost:5000/api/logs/upload \
+curl -X POST "https://drisafe.haithinh.top/api/devices/DEVICE_DATABASE_ID/rotate-token" \
+  -b cookies.txt \
+  -H "X-CSRFToken: CSRF_TOKEN"
+```
+
+## Live Preview
+
+Live Preview is a near-realtime HTTPS diagnostics path for checking current sensor values, parser output, and raw bytes. It is not the main cloud dashboard flow and is not used as a live driving dashboard. Live Preview data may be dropped and is not part of the durable ride dataset. It is not normal operational telemetry, ride history, research data, training data, or a persistent session log.
+
+The ESP node must continue using `/api/logs/upload` for persistent telemetry and acknowledgement-based deletion. Live Preview never returns `accepted_sequences`, durable row ids, or token details.
+
+Production Live Preview state uses Redis for latest-value cache, TTL expiry, rate limiting, and Pub/Sub fan-out to browser Server-Sent Events. Redis is internal-only in Docker Compose and is not published on a host port. Local development can omit `REDIS_URL`; the server will use a process-local memory fallback, which is only suitable for one-process development because Gunicorn workers do not share it.
+
+Device ingest:
+
+```text
+POST /api/telemetry/live
+Content-Type: application/json
+X-Device-ID: <device-id>
+Authorization: Bearer <device-token>
+```
+
+Request body fields are a single latest sample. Required fields are `session_id`, `seq`, and `device_time_ms`. Optional fields are `timestamp`, `rpm`, `tps`, `tps_voltage`, `ect`, `iat`, `battery`, `injector_ms`, `injector_raw`, `fuel_cut_inferred`, `raw_frame`, `raw_length`, `parser_version`, and `ignition_deg`. Unknown fields are rejected. Numeric fields must be finite, booleans must be real JSON booleans, `raw_frame` must be an even-length hex string, and live request bodies are capped by `LIVE_MAX_REQUEST_BYTES`.
+
+Example:
+
+```bash
+curl -X POST "https://drisafe.haithinh.top/api/telemetry/live" \
   -H "Content-Type: application/json" \
-  -H "X-Device-ID: xiao-ecu-001" \
-  -H "Authorization: Bearer $DEVICE_TOKEN" \
+  -H "X-Device-ID: ecu-test-001" \
+  -H "Authorization: Bearer DEVICE_TOKEN" \
   -d '{
-    "session_id":"ride-2026-07-06-002",
-    "records":[
-      {"seq":1,"timestamp":"2026-07-06T15:00:00Z","rpm":1200,"tps":4.2,"ect":80,"battery":14.1},
-      {"seq":2,"timestamp":"2026-07-06T15:00:01Z","rpm":1450,"tps":6.1,"ect":81,"battery":14.0}
+    "session_id": "ecu-test-001-boot-1",
+    "seq": 100,
+    "device_time_ms": 25000,
+    "rpm": 1800,
+    "tps": 9.5,
+    "ect": 81,
+    "iat": 34,
+    "battery": 13.8,
+    "injector_ms": 2.3,
+    "fuel_cut_inferred": false,
+    "raw_frame": "02187117"
+  }'
+```
+
+Success response:
+
+```json
+{
+  "ok": true,
+  "device_id": "ecu-test-001",
+  "server_received_at": "2026-07-14T10:00:00.000Z"
+}
+```
+
+Browser endpoints require normal login cookies and enforce device ownership; admins can access all devices:
+
+```text
+GET /devices/<device_id>/live
+GET /api/devices/<device_id>/live/latest
+GET /api/devices/<device_id>/live/stream
+```
+
+`/api/devices/<device_id>/live/latest` returns `Cache-Control: no-store` and either the current sample or `{ "online": false, "sample": null }`. `/api/devices/<device_id>/live/stream` is an SSE stream with `telemetry` events and heartbeat comments. The stream uses `Cache-Control: no-cache, no-store` and `X-Accel-Buffering: no`.
+
+Default live behavior:
+
+```text
+TTL: 15 seconds
+Sustained device rate: 5 requests/second
+Burst: 10 requests
+Overload response: HTTP 429 with Retry-After
+Raw frame cap: 256 hex characters
+Redis keys: drisafe:live:<device_id>:latest and drisafe:live:<device_id>:channel
+```
+
+Troubleshooting:
+
+- `503 LIVE_PREVIEW_UNAVAILABLE`: Redis is unavailable or `REDIS_URL` is missing while Redis is required.
+- `429 LIVE_RATE_LIMITED`: the device exceeded the live token-bucket rate limit; durable `/api/logs/upload` is unaffected.
+- Browser shows `DISCONNECTED`: check the reverse proxy SSE buffering settings and that the stream response is not being cached.
+- Browser shows `NO DATA`: no live sample exists or the latest sample TTL expired.
+
+## Uploading Telemetry
+
+Single development record:
+
+```bash
+curl -X POST "https://drisafe.haithinh.top/api/telemetry" \
+  -H "Content-Type: application/json" \
+  -H "X-Device-ID: ecu-abc123" \
+  -H "Authorization: Bearer DEVICE_TOKEN" \
+  -d '{
+    "session_id": "ecu-abc123-boot-42-a81f",
+    "seq": 1,
+    "device_time_ms": 100,
+    "rpm": 1500,
+    "tps": 8,
+    "ect": 80,
+    "iat": 33,
+    "battery": 13.7
+  }'
+```
+
+Offline batch:
+
+```bash
+curl -X POST "https://drisafe.haithinh.top/api/logs/upload" \
+  -H "Content-Type: application/json" \
+  -H "X-Device-ID: ecu-abc123" \
+  -H "Authorization: Bearer DEVICE_TOKEN" \
+  -d '{
+    "session_id": "ecu-abc123-boot-42-a81f",
+    "session_ended": false,
+    "records": [
+      {
+        "seq": 1,
+        "device_time_ms": 100,
+        "rpm": 1500,
+        "tps": 8,
+        "ect": 80,
+        "iat": 33,
+        "battery": 13.7
+      }
     ]
   }'
 ```
 
-The response reports `inserted` and `skipped`. Batches are limited by `MAX_LOG_RECORDS` (default 1,000) and the entire HTTP body by `MAX_CONTENT_LENGTH` (default 2 MiB). Records in one upload must share its top-level session ID. Timestamps accept timezone-aware ISO 8601 strings or Unix epoch seconds.
+Timestamps are optional and must be timezone-aware ISO 8601 or Unix epoch seconds when present. `device_time_ms` can be used when the node does not know wall-clock time. The server always records `server_received_at`.
 
-## PostgreSQL and Docker
+## Acknowledgement Semantics
 
-For local PostgreSQL, set:
+Successful uploads return:
 
-```dotenv
-DATABASE_URL=postgresql+psycopg://ecu_user:password@localhost:5432/ecu_dashboard
+```json
+{
+  "ok": true,
+  "device_id": "ecu-abc123",
+  "session_id": "ecu-abc123-boot-42-a81f",
+  "received_count": 100,
+  "inserted_count": 93,
+  "duplicate_count": 7,
+  "accepted_sequences": {
+    "minimum": 1001,
+    "maximum": 1100,
+    "contiguous_until": 1100
+  },
+  "server_time": "2026-07-13T10:00:00Z"
+}
 ```
 
-For containers, copy `.env.example` to `.env`, replace every placeholder secret, then run:
+`accepted_sequences.contiguous_until` is the highest stored sequence number for which every record from the session's stored minimum sequence through that value exists on the server. It is not simply the largest received sequence.
+
+Example: if the server has `1, 2, 3, 5`, then `contiguous_until` is `3`.
+
+The node must delete local telemetry only after receiving a successful response and only up to `accepted_sequences.contiguous_until`.
+
+## Docker
+
+Copy `.env.example` to `.env`, replace every secret, then run:
 
 ```bash
 docker compose up --build
 docker compose exec web flask --app app create-user --admin
 ```
 
-The web container applies migrations before Gunicorn starts. In a multi-replica deployment, run migrations as a separate one-off release job instead. Set `SESSION_COOKIE_SECURE=true` behind HTTPS.
+The web container listens internally on port `5000`, applies migrations, and starts Gunicorn with the `gthread` worker class. The default `2` workers and `8` threads keep long-lived SSE streams from consuming the only available worker. PostgreSQL and Redis are not published publicly. Redis is used as an ephemeral cache and Pub/Sub bus; persistence is disabled for Live Preview state. The compose file exposes only the web service to the external `npm-proxy` network for the existing reverse proxy.
 
-The optional development Mosquitto placeholder starts with:
+## Production: drisafe.haithinh.top
 
-```bash
-docker compose --profile mqtt up --build
+Recommended production settings:
+
+```dotenv
+APP_ENV=production
+SESSION_COOKIE_SECURE=true
+TRUST_PROXY=true
+TRUSTED_HOSTS=drisafe.haithinh.top
+MAX_CONTENT_LENGTH=2097152
+MAX_LOG_RECORDS=1000
+REDIS_URL=redis://redis:6379/0
+LIVE_REDIS_REQUIRED=true
+LIVE_SAMPLE_TTL_SECONDS=15
+LIVE_RATE_LIMIT_PER_SECOND=5
+LIVE_RATE_LIMIT_BURST=10
+LIVE_MAX_REQUEST_BYTES=4096
+LIVE_SSE_HEARTBEAT_SECONDS=15
+LIVE_RAW_FRAME_MAX_CHARS=256
+PAIRING_CODE_TTL_SECONDS=900
+PAIRING_MAX_ATTEMPTS=10
+GUNICORN_WORKERS=2
+GUNICORN_THREADS=8
 ```
 
-It permits anonymous local connections and must not be exposed as-is.
+Nginx or Nginx Proxy Manager should terminate HTTPS for `drisafe.haithinh.top` and proxy to `drisafe-web:5000`. The app uses `ProxyFix` when `TRUST_PROXY=true`.
 
-Run the backend regression suite with `python -m unittest discover -v`.
+For the current Nginx Proxy Manager and Cloudflare Tunnel topology, keep the Cloudflare tunnel pointed at NPM on local HTTP port `80`, then configure the NPM proxy host:
 
-## MQTT-ready contract
+```text
+Domain Names: drisafe.haithinh.top
+Scheme: http
+Forward Hostname / IP: drisafe-web
+Forward Port: 5000
+Websockets Support: enabled
+Cache Assets: disabled
+Force SSL: disabled when Cloudflare already supplies the browser-facing HTTPS scheme
+```
 
-`mqtt_service.py` defines the transport seam and these future topics:
+The `web` compose service joins the external `npm-proxy` Docker network so NPM can resolve `drisafe-web`. Paste `deploy/npm-advanced.conf` into the NPM Advanced field for this host when using the optional device Live Preview SSE endpoint.
 
-- `ecu/<device_id>/telemetry` — one object with the same fields as `POST /api/telemetry`
-- `ecu/<device_id>/status` — `{ "online": true, "timestamp": "...", "firmware": "..." }`
-- `ecu/<device_id>/logs` — the same `{ "session_id": "...", "records": [...] }` object as offline upload
+For SSE, the reverse proxy location for `/api/devices/<device_id>/live/stream` must disable buffering and caching and use a long read timeout:
 
-The future subscriber should authenticate devices at the broker, derive `device_id` from the topic, decode JSON, and call `services.telemetry.validate_record` / `validate_batch` and `store_records`. This ensures MQTT and HTTP enforce the same validation and duplicate policy.
+```nginx
+proxy_buffering off;
+proxy_cache off;
+proxy_read_timeout 3600s;
+add_header X-Accel-Buffering no;
+```
 
-## Production notes
+When Cloudflare is in front of Nginx, keep Live Preview as normal HTTPS traffic and avoid proxy rules that buffer or transform `text/event-stream` responses.
 
-- Set `APP_ENV=production`, a stable random `SECRET_KEY`, PostgreSQL `DATABASE_URL`, HTTPS, and `SESSION_COOKIE_SECURE=true`.
-- Device token rotation is available at `POST /api/devices/<database-id>/rotate-token` to the owning user (or an admin). It invalidates the prior token immediately.
-- Back up PostgreSQL, add rate limiting at the reverse proxy, and configure broker TLS/passwords before enabling MQTT externally.
-- The in-memory classic simulator state is intentionally compatibility-only; durable ECU telemetry belongs in the ingestion APIs.
+Health check:
+
+```bash
+curl https://drisafe.haithinh.top/health
+```
+
+Expected:
+
+```json
+{"status":"ok","database":"ok","redis":"ok"}
+```
+
+Local memory fallback reports `"redis":"memory"`. Production reports unhealthy if Redis is unavailable or not configured.
+
+## Tests
+
+```bash
+.venv/bin/python -m unittest discover -v
+```
+
+The tests use an isolated in-memory SQLite database and an in-memory Live Preview backend. They cover login safety, ownership checks, pairing, token rotation, device authentication, idempotent uploads, gap-aware acknowledgements, live validation, rate limiting, latest sample responses, SSE filtering and heartbeat behavior, and the guarantee that live samples do not create durable telemetry rows or ride sessions.
+
+Dashboard coverage includes overview summaries, recent diagnoses, session filtering, session statistics, anomaly event grouping, large-session downsampling, AI API unavailable handling, re-analysis state responses, compare metrics, Tool playback page rendering, and unit-formatting helpers.
+
+## Dashboard Development
+
+Local development:
+
+```bash
+source .venv/bin/activate
+flask --app app db upgrade
+flask --app app run --debug
+```
+
+Production uses the Docker workflow described below. Run migrations before serving a new deployment:
+
+```bash
+flask --app app db upgrade
+docker compose up --build
+```
+
+No mock-data mode is enabled by default. Use real `/api/logs/upload` session data for production-like validation; if mock data is added later, it must be visibly labeled as simulated and structurally match the real API responses.
