@@ -75,7 +75,10 @@
         return "--";
     }
 
-    function checksum(raw) {
+    function checksum(sample) {
+        if (sample.checksum_valid === true) return "Pass";
+        if (sample.checksum_valid === false) return "Fail";
+        const raw = sample.raw_frame;
         if (raw && typeof raw === "object") {
             if (raw.checksum_ok === true) return "Pass";
             if (raw.checksum_ok === false) return "Fail";
@@ -145,7 +148,7 @@
         setText("timestamp", sample.timestamp || "--");
         setText("seq", sample.seq);
         setText("raw_length", rawLength(sample.raw_frame));
-        setText("checksum", checksum(sample.raw_frame));
+        setText("checksum", checksum(sample));
         rawFrame.textContent = rawToString(sample.raw_frame);
         renderParsed(sample.raw_frame);
         renderParameters(sample);

@@ -19,15 +19,21 @@ HEX_RE = re.compile(r"^[0-9a-fA-F]*$")
 STRING_LIMITS = {
     "session_id": 100,
     "parser_version": 64,
+    "ecu_profile_id": 100,
 }
 
 NUMERIC_LIMITS = {
     "rpm": (0, 100_000),
     "tps": (0, 100),
     "tps_voltage": (0, 10),
+    "tps_raw_candidate": (0, 255),
     "ect": (-80, 300),
     "iat": (-80, 300),
     "battery": (0, 100),
+    "battery_voltage": (0, 100),
+    "iat_c": (-80, 300),
+    "ect_c_candidate": (-80, 300),
+    "map_raw": (0, 255),
     "injector_ms": (0, 1000),
     "ignition_deg": (-180, 180),
 }
@@ -162,6 +168,9 @@ def validate_live_sample(payload: dict, *, device_id: str) -> dict:
     parser_version = _string(payload, "parser_version", STRING_LIMITS["parser_version"], required=False)
     if parser_version is not None:
         sample["parser_version"] = parser_version
+    ecu_profile_id = _string(payload, "ecu_profile_id", STRING_LIMITS["ecu_profile_id"], required=False)
+    if ecu_profile_id is not None:
+        sample["ecu_profile_id"] = ecu_profile_id
 
     raw_frame = payload.get("raw_frame")
     if raw_frame is not None:
@@ -172,7 +181,7 @@ def validate_live_sample(payload: dict, *, device_id: str) -> dict:
             raise ValidationError(f"raw_frame must be {_live_raw_frame_max_chars()} hexadecimal characters or fewer")
         if len(raw_frame) % 2 != 0 or not HEX_RE.fullmatch(raw_frame):
             raise ValidationError("raw_frame must contain an even number of hexadecimal characters")
-        sample["raw_frame"] = raw_frame
+        sample["raw_frame"] = raw_frame.upper()
         sample.setdefault("raw_length", len(raw_frame) // 2)
 
     return sample

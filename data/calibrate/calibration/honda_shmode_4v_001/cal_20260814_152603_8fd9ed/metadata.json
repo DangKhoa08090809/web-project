@@ -1,0 +1,36 @@
+{
+  "capture": {
+    "duration_override_s": null,
+    "expected_header_hex": "02187117",
+    "expected_raw_length": 24,
+    "frame_table": "0x17",
+    "host_start_time": "2026-08-14T15:26:03.102+07:00",
+    "no_guidance": false,
+    "sample_rate_source": "ECU polling",
+    "serial_baud": 115200,
+    "serial_port": "COM6"
+  },
+  "data_policy": {
+    "ml_applied": false,
+    "raw_immutable": true,
+    "semantic_decoder_applied": false
+  },
+  "environment": {
+    "ambient_temperature_c": 34.5,
+    "external_battery_v": 12.75
+  },
+  "scenario": {
+    "manual_throttle_position_estimates": false,
+    "optional": false,
+    "title": "Cold key-on / engine off"
+  },
+  "scenario_id": "cal_01_cold_key_on",
+  "session_id": "cal_20260814_152603_8fd9ed",
+  "vehicle": {
+    "cooling_type": "liquid",
+    "generation": "4-valve",
+    "manufacturer": "Honda",
+    "model": "SH Mode"
+  },
+  "vehicle_id": "honda_shmode_4v_001"
+}

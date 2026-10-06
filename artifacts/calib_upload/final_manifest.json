@@ -1,0 +1,96 @@
+{
+  "source_root": "data/calibrate",
+  "artifact_root": "artifacts/calib_upload",
+  "normalization": "metadata stripped; artifact records contain only time and raw; time starts at 0 per uploaded session/chunk",
+  "upload_flow": "HTTP POST /api/logs/upload with ESP legacy29 raw_frame conversion",
+  "active_sessions": [
+    {
+      "session_id": "calib-20260812-152832-2a54f0",
+      "record_count": 471,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-20260814-152603-8fd9ed",
+      "record_count": 741,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-20260814-153329-812a3f",
+      "record_count": 3629,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-r0024d0-c93a5fb4-part-01",
+      "record_count": 5000,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-r0024d0-c93a5fb4-part-02",
+      "record_count": 1922,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-r1032c0-849aa7f8-part-01",
+      "record_count": 5000,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-r1032c0-849aa7f8-part-02",
+      "record_count": 1899,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-session-000001",
+      "record_count": 117,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-session-000002-part-01",
+      "record_count": 5000,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-session-000002-part-02",
+      "record_count": 781,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-session-000003",
+      "record_count": 1249,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-session-000004",
+      "record_count": 3017,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-session-000005-part-01",
+      "record_count": 5000,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-session-000005-part-02",
+      "record_count": 2851,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-session-000006",
+      "record_count": 923,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-session-000007-part-01",
+      "record_count": 5000,
+      "analysis_status": "completed"
+    },
+    {
+      "session_id": "calib-real-run-session-000007-part-02",
+      "record_count": 1389,
+      "analysis_status": "completed"
+    }
+  ],
+  "total_sessions": 17,
+  "total_records": 43989,
+  "cleanup": "Removed 5 oversized initial calib sessions after replacing them with <=5000-record part sessions for Analyzer compatibility."
+}

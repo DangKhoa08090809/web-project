@@ -5,6 +5,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import db
 from models import Device
+from services.live_control import ControlError, acknowledge_command, poll_for_command
+from services.pi_sync import store_pi_sync, validate_pi_sync
 from services.provisioning import PairingError, pair_device
 from services.live import LiveUnavailable, check_live_rate_limit, store_live_sample, validate_live_sample
 from services.telemetry import ValidationError, store_upload, validate_batch, validate_single_upload
@@ -149,3 +151,57 @@ def logs_upload():
     except ValidationError as exc:
         return api_error(exc.code, str(exc), exc.status_code)
     return _store(upload)
+
+
+@ingest_bp.post("/device/sync/session")
+@device_required
+def device_sync_session():
+    if not request.is_json:
+        return api_error("UNSUPPORTED_MEDIA_TYPE", "Content-Type must be application/json", 415)
+    data = _json_body()
+    if data is None:
+        return api_error("MALFORMED_JSON", "A valid JSON object is required", 400)
+    try:
+        upload = validate_pi_sync(data)
+        acknowledgement = store_pi_sync(g.device, upload)
+    except ValidationError as exc:
+        db.session.rollback()
+        return api_error(exc.code, str(exc), exc.status_code)
+    except SQLAlchemyError:
+        db.session.rollback()
+        return api_error("PI_SYNC_STORE_FAILED", "Pi session sync could not be stored", 500)
+    return jsonify(acknowledgement), 200
+
+
+@ingest_bp.post("/device/control/poll")
+@device_required
+def device_control_poll():
+    if not request.is_json:
+        return api_error("UNSUPPORTED_MEDIA_TYPE", "Content-Type must be application/json", 415)
+    data = _json_body()
+    if data is None:
+        return api_error("MALFORMED_JSON", "A valid JSON object is required", 400)
+    try:
+        return jsonify(poll_for_command(g.device, data)), 200
+    except ControlError as exc:
+        return api_error(exc.code, str(exc), exc.status_code)
+    except SQLAlchemyError:
+        db.session.rollback()
+        return api_error("CONTROL_STORE_FAILED", "Device control state could not be stored", 500)
+
+
+@ingest_bp.post("/device/control/ack")
+@device_required
+def device_control_ack():
+    if not request.is_json:
+        return api_error("UNSUPPORTED_MEDIA_TYPE", "Content-Type must be application/json", 415)
+    data = _json_body()
+    if data is None:
+        return api_error("MALFORMED_JSON", "A valid JSON object is required", 400)
+    try:
+        return jsonify(acknowledge_command(g.device, data)), 200
+    except ControlError as exc:
+        return api_error(exc.code, str(exc), exc.status_code)
+    except SQLAlchemyError:
+        db.session.rollback()
+        return api_error("CONTROL_ACK_FAILED", "Device control acknowledgement could not be stored", 500)

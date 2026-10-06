@@ -1,0 +1,51 @@
+{
+  "session_id": "canonical_shmode_session_v1",
+  "vehicle_id": "Vehicle xiao-a",
+  "device_id": "xiao-a",
+  "firmware_version": "test-firmware",
+  "session_note": "Cross-repository canonical contract fixture.",
+  "ecu_profile_id": "honda_keihin_legacy_29",
+  "decoder_id": "honda_keihin_legacy_29",
+  "decoder_version": "0.1.0",
+  "telemetry_schema_version": "canonical-telemetry-v1",
+  "sampling": {
+    "sample_interval_ms": 100.0
+  },
+  "samples": [
+    {"sequence": 0, "timestamp_ms": 0.0, "rpm": 1200.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 1, "timestamp_ms": 100.0, "rpm": 1201.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 2, "timestamp_ms": 200.0, "rpm": 1202.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 3, "timestamp_ms": 300.0, "rpm": 1203.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 4, "timestamp_ms": 400.0, "rpm": 1204.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 5, "timestamp_ms": 500.0, "rpm": 1205.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 6, "timestamp_ms": 600.0, "rpm": 1206.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 7, "timestamp_ms": 700.0, "rpm": 1207.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 8, "timestamp_ms": 800.0, "rpm": 1208.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 9, "timestamp_ms": 900.0, "rpm": 1209.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 10, "timestamp_ms": 1000.0, "rpm": 1210.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 11, "timestamp_ms": 1100.0, "rpm": 1211.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 12, "timestamp_ms": 1200.0, "rpm": 1212.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 13, "timestamp_ms": 1300.0, "rpm": 1213.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 14, "timestamp_ms": 1400.0, "rpm": 1214.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 15, "timestamp_ms": 1500.0, "rpm": 1215.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 16, "timestamp_ms": 1600.0, "rpm": 1216.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 17, "timestamp_ms": 1700.0, "rpm": 1217.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 18, "timestamp_ms": 1800.0, "rpm": 1218.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 19, "timestamp_ms": 1900.0, "rpm": 1219.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 20, "timestamp_ms": 2000.0, "rpm": 1220.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 21, "timestamp_ms": 2100.0, "rpm": 1221.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 22, "timestamp_ms": 2200.0, "rpm": 1222.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 23, "timestamp_ms": 2300.0, "rpm": 1223.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}},
+    {"sequence": 24, "timestamp_ms": 2400.0, "rpm": 1224.0, "tps_voltage": 0.5, "tps_raw_candidate": 0.0, "battery_voltage": 12.8, "iat_c": 33.0, "ect_c_candidate": 52.0, "map_raw": 89.0, "frame_valid": true, "checksum_valid": true, "quality_flags": {}, "candidate_signals": {}}
+  ],
+  "signal_definitions": {
+    "rpm": {"status": "high_confidence_candidate", "unit": "rpm"},
+    "tps_voltage": {"status": "high_confidence_candidate", "unit": "V"},
+    "tps_raw_candidate": {"status": "candidate", "unit": "raw"},
+    "battery_voltage": {"status": "high_confidence_candidate", "unit": "V"},
+    "iat_c": {"status": "high_confidence_candidate", "unit": "degC"},
+    "ect_c_candidate": {"status": "candidate", "unit": "degC"},
+    "map_raw": {"status": "candidate", "unit": "raw"}
+  },
+  "source_type": "canonical"
+}

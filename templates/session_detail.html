@@ -17,6 +17,20 @@
     </div>
 </section>
 
+<section class="card feature-card capture-status-card">
+    <div class="card-title">
+        <div>
+            <p class="eyebrow">Capture status</p>
+            <h2>{{ summary.capture.label }}</h2>
+        </div>
+        <span class="badge capture-status-{{ summary.capture.state }}">{{ summary.capture.label }}</span>
+    </div>
+    <p class="capture-status-message">{{ summary.capture.message }}</p>
+    <dl class="detail-grid compact-details">
+        <div><dt>Termination reason</dt><dd>{{ summary.capture.reason }}</dd></div>
+    </dl>
+</section>
+
 <section class="card feature-card">
     <div class="card-title">
         <div>
@@ -44,81 +58,288 @@
     </form>
 </section>
 
-<section class="dashboard-grid">
-    <article class="card">
-        <div class="card-title">
-            <div>
-                <p class="eyebrow">Statistical summary</p>
-                <h2>Decoded parameters</h2>
-            </div>
-        </div>
-        <div class="stats-grid">
-            {% for key, item in statistics.items() if key != '_quality' %}
-            <div class="stat-block">
-                <strong>{{ item.label }}</strong>
-                <span>Min {{ item.minimum|round(item.precision) }} {{ item.unit }}</span>
-                <span>Max {{ item.maximum|round(item.precision) }} {{ item.unit }}</span>
-                <span>Mean {{ item.mean|round(item.precision) }} {{ item.unit }}</span>
-                <span>Std {{ item.stddev|round(item.precision) }} {{ item.unit }}</span>
-            </div>
-            {% else %}
-            <p class="muted">No decoded numeric ECU parameters are available for this session.</p>
-            {% endfor %}
-        </div>
-        <dl class="detail-grid compact-details">
-            <div><dt>Missing samples</dt><dd>{{ statistics['_quality'].missing_samples }} ({{ '%.1f%%'|format(statistics['_quality'].missing_sample_percentage) }})</dd></div>
-            <div><dt>Invalid frames</dt><dd>{{ statistics['_quality'].invalid_frame_count }}</dd></div>
-            <div><dt>Checksum failures</dt><dd>{{ statistics['_quality'].checksum_failure_count }}</dd></div>
-            <div><dt>Anomalous samples</dt><dd>{{ analysis.anomalous_sample_count }} ({{ '%.1f%%'|format(analysis.anomalous_sample_percentage) if analysis.anomalous_sample_percentage is not none else '--' }})</dd></div>
-        </dl>
-    </article>
-
-    <article class="card">
-        <div class="card-title">
-            <div>
-                <p class="eyebrow">Anomaly timeline</p>
-                <h2>Grouped events</h2>
-            </div>
-            <span class="badge {{ analysis.result|lower|replace(' ', '-') }}">{{ analysis.result }}</span>
-        </div>
-        <div id="event-list" class="list-stack compact-list">
-            {% for event in analysis.events %}
-            <button class="event-row event-button" id="{{ event.id }}" type="button" data-start="{{ event.start_elapsed }}" data-end="{{ event.end_elapsed }}">
-                <span class="badge {{ event.severity|lower|replace(' ', '-') }}">{{ event.severity }}</span>
-                <div>
-                    <strong>{{ event.title }}</strong>
-                    <p>{{ event.duration_label }} · max {{ '%.2f'|format(event.max_anomaly_score) }} · {{ event.signals|join(', ') }}</p>
-                </div>
-            </button>
-            {% else %}
-            <p class="muted">No grouped anomaly events were detected in available telemetry.</p>
-            {% endfor %}
-        </div>
-        <aside id="event-detail" class="event-detail">
-            <strong>Event details</strong>
-            <p>Select an event to focus the charts and inspect cautious diagnostic guidance.</p>
-        </aside>
-    </article>
-</section>
-
-<section class="card chart-workbench" id="session-workbench" data-samples-url="{{ samples_url }}">
-    <div class="chart-toolbar">
+<section class="card feature-card">
+    <div class="card-title">
         <div>
-            <p class="eyebrow">Synchronized historical charts</p>
-            <h2>Session timeline</h2>
+            <p class="eyebrow">Post-ride guidance</p>
+            <h2>Maintenance findings</h2>
+            <p class="muted">{{ analysis.baseline_message }}</p>
         </div>
-        <div class="button-row">
-            <button class="secondary" type="button" data-window="30">30s</button>
-            <button class="secondary" type="button" data-window="60">1m</button>
-            <button class="secondary" type="button" data-window="300">5m</button>
-            <button class="secondary" type="button" data-window="all">All</button>
-            <button class="secondary" id="reset-zoom" type="button">Reset zoom</button>
-        </div>
+        <span class="badge {{ analysis.overall_recommendation_severity }}">{{ analysis.overall_recommendation_severity|replace('_', ' ')|title }}</span>
     </div>
-    <div id="signal-toggles" class="toggle-grid" aria-label="Chart signal toggles"></div>
-    <div id="chart-state" class="empty subtle">Loading session samples...</div>
-    <div id="charts" class="chart-stack"></div>
+    <div class="finding-list">
+        {% for finding in analysis.findings %}
+        <article class="finding-card">
+            <div class="finding-head">
+                <div>
+                    <p class="eyebrow">{{ finding.signal_label }}</p>
+                    <h3>{{ finding.severity_label }}</h3>
+                </div>
+                <span class="badge {{ finding.severity }}">{{ finding.severity_label }}</span>
+            </div>
+            <p>{{ finding.recommendation }}</p>
+            <p class="muted">Observed {{ finding.direction }} pattern in post-ride {{ finding.signal_label|lower }} data.</p>
+            <details class="finding-evidence">
+                <summary>Technical evidence</summary>
+                <dl class="detail-grid compact-details">
+                    <div><dt>Code</dt><dd>{{ finding.recommendation_code }}</dd></div>
+                    <div><dt>Direction</dt><dd>{{ finding.direction }}</dd></div>
+                    <div><dt>Session median</dt><dd>{{ finding.evidence.session_median|round(2) if finding.evidence.session_median is not none else '--' }} {{ analysis.baseline.signals[finding.signal].unit }}</dd></div>
+                    <div><dt>Session max</dt><dd>{{ finding.evidence.session_max|round(2) if finding.evidence.session_max is not none else '--' }} {{ analysis.baseline.signals[finding.signal].unit }}</dd></div>
+                    <div><dt>Baseline</dt><dd>{{ finding.evidence.baseline_status }}</dd></div>
+                    <div><dt>Baseline median</dt><dd>{{ finding.evidence.baseline_median|round(2) if finding.evidence.baseline_median is not none else '--' }} {{ analysis.baseline.signals[finding.signal].unit }}</dd></div>
+                    <div><dt>Baseline p95</dt><dd>{{ finding.evidence.baseline_p95|round(2) if finding.evidence.baseline_p95 is not none else '--' }} {{ analysis.baseline.signals[finding.signal].unit }}</dd></div>
+                    <div><dt>Deviation</dt><dd>{{ finding.evidence.deviation }}</dd></div>
+                </dl>
+            </details>
+        </article>
+        {% else %}
+        <p class="muted">No maintenance recommendation was generated from the available post-ride evidence.</p>
+        {% endfor %}
+    </div>
 </section>
+
+<section class="card analysis-summary-card">
+    <div class="card-title">
+        <div>
+            <p class="eyebrow">Analysis summary</p>
+            <h2>Decoded parameters</h2>
+        </div>
+        <span class="badge {{ analysis.result|lower|replace(' ', '-') }}">{{ analysis.result }}</span>
+    </div>
+    <div class="stats-grid">
+        {% for key, item in statistics.items() if key not in ('_quality', 'tps_voltage') %}
+        <div class="stat-block">
+            <strong>{{ item.label }}</strong>
+            <span>Min {{ item.minimum|round(item.precision) }} {{ item.unit }}</span>
+            <span>Max {{ item.maximum|round(item.precision) }} {{ item.unit }}</span>
+            <span>Mean {{ item.mean|round(item.precision) }} {{ item.unit }}</span>
+            <span>Std {{ item.stddev|round(item.precision) }} {{ item.unit }}</span>
+        </div>
+        {% else %}
+        <p class="muted">No decoded numeric ECU parameters are available for this session.</p>
+        {% endfor %}
+    </div>
+    <dl class="detail-grid compact-details">
+        <div><dt>Missing samples</dt><dd>{{ statistics['_quality'].missing_samples }} ({{ '%.1f%%'|format(statistics['_quality'].missing_sample_percentage) }})</dd></div>
+        <div><dt>Invalid frames</dt><dd>{{ statistics['_quality'].invalid_frame_count }}</dd></div>
+        <div><dt>Checksum failures</dt><dd>{{ statistics['_quality'].checksum_failure_count }}</dd></div>
+        <div><dt>Anomalous samples</dt><dd>{{ analysis.anomalous_sample_count }} ({{ '%.1f%%'|format(analysis.anomalous_sample_percentage) if analysis.anomalous_sample_percentage is not none else '--' }})</dd></div>
+    </dl>
+</section>
+
+{% if analysis.diagnostic_evidence_view %}
+{% set evidence = analysis.diagnostic_evidence_view %}
+<details class="card feature-card diagnostic-evidence-card">
+    <summary class="diagnostic-evidence-summary">
+        <span class="diagnostic-evidence-title">
+            <span class="eyebrow">Additional research evidence</span>
+            <strong>Additional diagnostic evidence</strong>
+        </span>
+        {% if evidence.state.value %}
+        <span class="badge evidence-state-{{ evidence.state.value|replace('_', '-') }}">{{ evidence.state.label }}</span>
+        {% endif %}
+    </summary>
+    <div class="diagnostic-evidence-content">
+        <dl class="detail-grid compact-details">
+            <div><dt>Primary analysis</dt><dd>{{ analysis.result }}</dd></div>
+            {% for item in evidence.summary.details %}
+            <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+            {% endfor %}
+        </dl>
+
+        <div class="evidence-grid">
+            {% if evidence.summary.observations %}
+            <section class="evidence-subsection">
+                <h3>Observations</h3>
+                <div class="evidence-note-list">
+                    {% for item in evidence.summary.observations %}
+                    <article>
+                        <strong>{{ item.text }}</strong>
+                        {% if item.meta %}
+                        <small>{% for meta in item.meta %}{{ meta.label }}: {{ meta.value }}{% if not loop.last %} · {% endif %}{% endfor %}</small>
+                        {% endif %}
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            {% if evidence.summary.symptoms %}
+            <section class="evidence-subsection">
+                <h3>Symptoms</h3>
+                <div class="evidence-note-list">
+                    {% for item in evidence.summary.symptoms %}
+                    <article>
+                        <strong>{{ item.text }}</strong>
+                        {% if item.meta %}
+                        <small>{% for meta in item.meta %}{{ meta.label }}: {{ meta.value }}{% if not loop.last %} · {% endif %}{% endfor %}</small>
+                        {% endif %}
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            {% if evidence.summary.historical %}
+            <section class="evidence-subsection">
+                <h3>Historical recurrence</h3>
+                <div class="evidence-note-list">
+                    {% for item in evidence.summary.historical %}
+                    <article>
+                        <strong>{{ item.text }}</strong>
+                        {% if item.meta %}
+                        <small>{% for meta in item.meta %}{{ meta.label }}: {{ meta.value }}{% if not loop.last %} · {% endif %}{% endfor %}</small>
+                        {% endif %}
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+        </div>
+
+        {% if evidence.checks %}
+        <section class="evidence-subsection">
+            <h3>Recommended checks</h3>
+            <div class="evidence-check-list">
+                {% for check in evidence.checks %}
+                <article class="evidence-check">
+                    <div>
+                        <strong>{{ check.text }}</strong>
+                        {% if check.reason %}<p>{{ check.reason }}</p>{% endif %}
+                        {% if check.details %}
+                        <dl>
+                            {% for item in check.details %}
+                            <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+                            {% endfor %}
+                        </dl>
+                        {% endif %}
+                    </div>
+                    {% if check.priority %}
+                    <span class="badge check-priority-{{ check.priority|replace('_', '-') }}">{{ check.priority_label }}</span>
+                    {% endif %}
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        <details class="finding-evidence technical-evidence">
+            <summary>Technical details</summary>
+            {% if evidence.technical.detectors %}
+            <div class="evidence-table-wrap">
+                <table class="evidence-table">
+                    <thead><tr><th>Detector</th><th>Status</th><th>Version</th><th>Scores</th></tr></thead>
+                    <tbody>
+                        {% for detector in evidence.technical.detectors %}
+                        <tr>
+                            <td>{{ detector.name }}</td>
+                            <td><span class="badge detector-status-{{ detector.status_key|replace('_', '-') }}">{{ detector.status }}</span></td>
+                            <td>{{ detector.version }}</td>
+                            <td>{{ detector.scores }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            <div class="evidence-technical-grid">
+                {% if evidence.technical.coverage %}
+                <section>
+                    <h3>Coverage and disagreement</h3>
+                    <dl class="detail-grid compact-details">
+                        {% for item in evidence.technical.coverage %}
+                        <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+                        {% endfor %}
+                    </dl>
+                </section>
+                {% endif %}
+
+                {% if evidence.technical.versions %}
+                <section>
+                    <h3>Model and rule versions</h3>
+                    <dl class="detail-grid compact-details">
+                        {% for item in evidence.technical.versions %}
+                        <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+                        {% endfor %}
+                    </dl>
+                </section>
+                {% endif %}
+
+                {% if evidence.technical.provenance %}
+                <section>
+                    <h3>Provenance</h3>
+                    <dl class="detail-grid compact-details">
+                        {% for item in evidence.technical.provenance %}
+                        <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+                        {% endfor %}
+                    </dl>
+                </section>
+                {% endif %}
+            </div>
+        </details>
+    </div>
+</details>
+{% endif %}
+
+<section class="card anomaly-timeline-card" id="anomaly-timeline-card">
+    <div class="card-title">
+        <div>
+            <p class="eyebrow">Anomaly timeline</p>
+            <h2>Intervals over time</h2>
+        </div>
+        <span class="badge {{ analysis.result|lower|replace(' ', '-') }}">{{ analysis.result }}</span>
+    </div>
+    <dl class="timeline-summary" aria-label="Anomaly timeline summary">
+        <div><dt>Duration</dt><dd>{{ analysis.duration_label }}</dd></div>
+        <div><dt>Anomalous intervals</dt><dd>{{ analysis.event_count }}</dd></div>
+        <div><dt>Anomalous samples</dt><dd>{{ analysis.anomalous_sample_count }}</dd></div>
+        <div><dt>Anomaly ratio</dt><dd>{{ '%.1f%%'|format(analysis.anomalous_sample_percentage) if analysis.anomalous_sample_percentage is not none else '--' }}</dd></div>
+    </dl>
+    <p id="anomaly-timeline-state" class="muted" aria-live="polite">Loading grouped anomaly intervals...</p>
+    <div id="anomaly-timeline-viewport" class="anomaly-timeline-viewport" tabindex="0" aria-label="Anomaly timeline. Scroll horizontally to inspect time ranges." hidden>
+        <div id="anomaly-timeline-track" class="anomaly-timeline-track"></div>
+    </div>
+    <aside id="event-detail" class="event-detail" aria-live="polite">
+        <strong>Interval details</strong>
+        <p>No anomaly interval selected.</p>
+    </aside>
+</section>
+
+<details class="card chart-workbench chart-disclosure" id="session-workbench" data-samples-url="{{ samples_url }}">
+    <summary class="chart-disclosure-summary">
+        <span class="chart-disclosure-copy">
+            <span class="eyebrow">Diagnostic telemetry</span>
+            <strong class="chart-disclosure-title">Telemetry charts</strong>
+            <span class="muted">View signal behavior across the full ride.</span>
+        </span>
+        <span class="chart-disclosure-action">
+            <span class="chart-disclosure-show">Show charts</span>
+            <span class="chart-disclosure-hide">Collapse charts</span>
+        </span>
+    </summary>
+    <div class="chart-disclosure-content">
+        <div class="chart-toolbar">
+            <div>
+                <p class="eyebrow">Synchronized historical charts</p>
+                <h2>Session timeline</h2>
+            </div>
+            <div class="button-row">
+                <button class="secondary" type="button" data-window="30">30s</button>
+                <button class="secondary" type="button" data-window="60">1m</button>
+                <button class="secondary" type="button" data-window="300">5m</button>
+                <button class="secondary" type="button" data-window="all">All</button>
+                <button class="secondary" id="reset-zoom" type="button">Reset zoom</button>
+            </div>
+        </div>
+        <div id="signal-toggles" class="toggle-grid" aria-label="Chart signal toggles"></div>
+        <div id="chart-state" class="empty subtle" aria-live="polite" hidden>Loading charts...</div>
+        <button class="secondary" id="retry-charts" type="button" hidden>Retry charts</button>
+        <div id="charts" class="chart-stack"></div>
+        <p id="chart-downsample-note" class="muted chart-downsample-note" hidden></p>
+    </div>
+</details>
 
 <section class="card table-card raw-records-card">
     <div class="section-pad">
@@ -172,9 +393,6 @@
 </section>
 {% endblock %}
 {% block scripts %}
-<script>
-window.sessionAnalysis = {{ analysis|tojson }};
-</script>
 <script src="{{ url_for('static', filename='js/dashboardApi.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sessionDetail.js') }}"></script>
 {% endblock %}

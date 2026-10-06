@@ -29,6 +29,10 @@ def create_app(test_config=None):
     app.config.from_object(Config)
     if test_config:
         app.config.update(test_config)
+        if app.config.get("TESTING") and "TRUSTED_HOSTS" not in test_config:
+            app.config["TRUSTED_HOSTS"] = None
+        if app.config.get("TESTING") and "ML_API_BASE_URL" not in test_config:
+            app.config["ML_API_BASE_URL"] = ""
     else:
         Config.validate()
     if app.config.get("TRUST_PROXY"):

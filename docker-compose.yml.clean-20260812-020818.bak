@@ -1,0 +1,94 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    container_name: drisafe-web
+    build: .
+    restart: unless-stopped
+    expose:
+      - "5000"
+    environment:
+      APP_ENV: production
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      DB_HOST: db
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+      MAX_CONTENT_LENGTH: ${MAX_CONTENT_LENGTH:-2097152}
+      MAX_LOG_RECORDS: ${MAX_LOG_RECORDS:-1000}
+      RAW_FRAME_MAX_BYTES: ${RAW_FRAME_MAX_BYTES:-16384}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      LIVE_REDIS_REQUIRED: ${LIVE_REDIS_REQUIRED:-true}
+      LIVE_SAMPLE_TTL_SECONDS: ${LIVE_SAMPLE_TTL_SECONDS:-15}
+      LIVE_RATE_LIMIT_PER_SECOND: ${LIVE_RATE_LIMIT_PER_SECOND:-5}
+      LIVE_RATE_LIMIT_BURST: ${LIVE_RATE_LIMIT_BURST:-10}
+      LIVE_MAX_REQUEST_BYTES: ${LIVE_MAX_REQUEST_BYTES:-4096}
+      LIVE_SSE_HEARTBEAT_SECONDS: ${LIVE_SSE_HEARTBEAT_SECONDS:-15}
+      LIVE_RAW_FRAME_MAX_CHARS: ${LIVE_RAW_FRAME_MAX_CHARS:-256}
+      ML_API_BASE_URL: ${ML_API_BASE_URL:-}
+      ML_API_TIMEOUT_SECONDS: ${ML_API_TIMEOUT_SECONDS:-2.5}
+      ML_MODEL_NAME: ${ML_MODEL_NAME:-Isolation Forest}
+      ML_MODEL_VERSION: ${ML_MODEL_VERSION:-}
+      ML_TRAINING_DATA_VERSION: ${ML_TRAINING_DATA_VERSION:-}
+      ML_FEATURE_SCHEMA_VERSION: ${ML_FEATURE_SCHEMA_VERSION:-}
+      ML_DETECTION_THRESHOLD: ${ML_DETECTION_THRESHOLD:-}
+      PAIRING_CODE_TTL_SECONDS: ${PAIRING_CODE_TTL_SECONDS:-900}
+      PAIRING_MAX_ATTEMPTS: ${PAIRING_MAX_ATTEMPTS:-10}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-drisafe.haithinh.top}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-8}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - default
+      - npm-proxy
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    profiles: ["mqtt"]
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./deploy/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+
+volumes:
+  postgres_data:
+  redis_data:
+  mosquitto_data:
+
+networks:
+  npm-proxy:
+    external: true

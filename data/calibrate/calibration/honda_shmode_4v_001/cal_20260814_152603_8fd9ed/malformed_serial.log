@@ -1,0 +1,1 @@
+{"host_time": "2026-08-14T15:26:03.356+07:00", "original_line": "{\"device_time_ms\":396,\"raw_hex\":\"0218711700001900FFFF7D4B7B4C000{\"device_time_ms\":118645,\"raw_hex\":\"0218711700001900FFFF794C7A4C7D000058810000000066\",\"raw_length\":24,\"checksum_ok\":true}", "reason": "malformed JSON: Expecting ',' delimiter"}

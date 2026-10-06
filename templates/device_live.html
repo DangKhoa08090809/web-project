@@ -5,7 +5,7 @@
     <div>
         <p class="eyebrow">Live Preview</p>
         <h1>{{ device.device_name }}</h1>
-        <p>Temporary diagnostic data · Not saved to ride history</p>
+        <p>Temporary canonical telemetry · Not saved to ride history</p>
     </div>
     <span id="live-state" class="status idle">NO DATA</span>
 </section>
@@ -16,7 +16,20 @@
     data-latest-url="{{ latest_url }}"
     data-stream-url="{{ stream_url }}"
     data-ttl-seconds="{{ ttl_seconds }}"
+    data-control-url="{{ control_url }}"
+    data-enable-url="{{ enable_url }}"
+    data-disable-url="{{ disable_url }}"
 >
+    <input type="hidden" id="live-control-csrf" name="csrf_token" value="{{ csrf_token() }}">
+    <section class="live-section live-control" id="live-control">
+        <div>
+            <p class="eyebrow">Remote control</p>
+            <h2>Live Mode: <span id="live-control-state">--</span></h2>
+            <p class="muted" id="live-control-message">Checking ECU Reader control availability.</p>
+        </div>
+        <button class="primary" id="live-control-action" type="button" disabled>Enable Live Mode</button>
+    </section>
+
     <div class="live-toolbar">
         <div>
             <strong>{{ device.device_id }}</strong>
@@ -30,15 +43,17 @@
 
     <section class="live-section">
         <div class="section-title">
-            <h2>Parsed Values</h2>
-            <p class="muted">Current formulas may be provisional.</p>
+            <h2>Canonical Telemetry</h2>
+            <p class="muted">Candidate signals remain marked until validated.</p>
         </div>
         <dl class="metrics live-metrics">
             <div><dt>RPM</dt><dd data-field="rpm">--</dd></div>
             <div><dt>TPS</dt><dd data-field="tps">--</dd></div>
             <div><dt>TPS voltage</dt><dd data-field="tps_voltage">--</dd></div>
-            <div><dt>ECT</dt><dd data-field="ect">--</dd></div>
-            <div><dt>IAT</dt><dd data-field="iat">--</dd></div>
+            <div><dt>TPS raw candidate</dt><dd data-field="tps_raw_candidate">--</dd></div>
+            <div><dt>ECT candidate</dt><dd data-field="ect_c_candidate">--</dd></div>
+            <div><dt>IAT</dt><dd data-field="iat_c">--</dd></div>
+            <div><dt>MAP raw</dt><dd data-field="map_raw">--</dd></div>
             <div><dt>Battery</dt><dd data-field="battery">--</dd></div>
             <div><dt>Injector time</dt><dd data-field="injector_ms">--</dd></div>
             <div><dt>Fuel cut</dt><dd data-field="fuel_cut_inferred">--</dd></div>
@@ -54,7 +69,10 @@
             <div><dt>Sequence</dt><dd data-field="seq">--</dd></div>
             <div><dt>Device time</dt><dd data-field="device_time_ms">--</dd></div>
             <div><dt>Server received</dt><dd data-field="server_received_at">--</dd></div>
-            <div><dt>Parser version</dt><dd data-field="parser_version">--</dd></div>
+            <div><dt>Decoder</dt><dd data-field="decoder">--</dd></div>
+            <div><dt>Profile</dt><dd data-field="ecu_profile_id">--</dd></div>
+            <div><dt>Frame valid</dt><dd data-field="frame_valid">--</dd></div>
+            <div><dt>Checksum</dt><dd data-field="checksum_valid">--</dd></div>
             <div><dt>Injector raw</dt><dd data-field="injector_raw">--</dd></div>
             <div><dt>Raw length</dt><dd data-field="raw_length">--</dd></div>
         </dl>

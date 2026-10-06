@@ -5,13 +5,13 @@ import secrets
 
 from flask import Blueprint, Response, current_app, jsonify, make_response, redirect, render_template, request, stream_with_context, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import func
 
 from extensions import db
 from models import Device, DevicePairingCode, RideSession, TelemetryRecord, utc_now
 from services.analysis import (
     apply_derived_filters,
     build_chart_payload,
-    compare_sessions,
     database_summary_counts,
     device_sync_summary,
     format_duration,
@@ -20,12 +20,21 @@ from services.analysis import (
     query_sessions_for_user,
     session_duration_seconds,
     session_records,
+    session_summaries,
     session_summary,
     statistics_for_records,
     analysis_snapshot,
 )
 from services.live import LiveUnavailable, get_latest_sample, get_live_backend, live_status, sse_comment, sse_event
 from services.ml_client import ml_status
+from services.analysis_submission import submit_session_to_analyzer
+from services.live_control import (
+    COMMAND_DISABLE_LIVE_MODE,
+    COMMAND_ENABLE_LIVE_MODE,
+    ControlError,
+    control_state,
+    create_live_command,
+)
 from services.provisioning import PairingError, create_manual_device, create_pairing_code
 
 
@@ -56,14 +65,27 @@ def _session_by_pk(session_pk: int):
 
 
 def _recent_sessions(devices):
-    result = {}
-    for device in devices:
-        result[device.id] = (
-            RideSession.query.filter_by(device_id=device.id)
-            .order_by(RideSession.last_record_at.desc())
-            .limit(3)
-            .all()
-        )
+    result = {device.id: [] for device in devices}
+    device_ids = list(result)
+    if not device_ids:
+        return result
+    row_number = func.row_number().over(
+        partition_by=RideSession.device_id,
+        order_by=(RideSession.last_record_at.desc(), RideSession.id.desc()),
+    ).label("row_number")
+    ranked = (
+        db.session.query(RideSession.id.label("session_pk"), RideSession.device_id, row_number)
+        .filter(RideSession.device_id.in_(device_ids))
+        .subquery()
+    )
+    sessions = (
+        RideSession.query.join(ranked, RideSession.id == ranked.c.session_pk)
+        .filter(ranked.c.row_number <= 3)
+        .order_by(RideSession.device_id, RideSession.last_record_at.desc())
+        .all()
+    )
+    for session in sessions:
+        result.setdefault(session.device_id, []).append(session)
     return result
 
 
@@ -97,6 +119,22 @@ def _display_number(value, precision: int | None = None):
     return formatted if precision == 0 else formatted.rstrip("0").rstrip(".")
 
 
+def _first_present(*values):
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _display_tps(record):
+    if record.tps is not None:
+        return _display_number(record.tps, 2)
+    raw = _first_present(record.tps_raw, record.tps_raw_candidate)
+    if raw is not None:
+        return f"{_display_number(raw, 0)} raw"
+    return "--"
+
+
 def _raw_frame_preview(raw_frame):
     if raw_frame is None:
         return "--"
@@ -118,10 +156,10 @@ def _record_rows(records):
             "timestamp": timestamp.strftime("%H:%M:%S.%f")[:-3] if timestamp else "--",
             "device_time_ms": _display_number(record.device_time_ms),
             "rpm": _display_number(record.rpm, 0),
-            "tps": _display_number(record.tps, 2),
-            "ect": _display_number(record.ect, 1),
-            "iat": _display_number(record.iat, 1),
-            "battery": _display_number(record.battery, 2),
+            "tps": _display_tps(record),
+            "ect": _display_number(_first_present(record.ect, record.ect_c, record.ect_c_candidate), 1),
+            "iat": _display_number(_first_present(record.iat, record.iat_c), 1),
+            "battery": _display_number(_first_present(record.battery, record.battery_voltage), 2),
             "raw_frame": _raw_frame_preview(record.raw_frame),
         })
     return rows
@@ -206,17 +244,18 @@ def revoke_pairing_code(code_pk):
 def sessions():
     query = query_sessions_for_user(_session_query(), request.args)
     rows = query.order_by(RideSession.started_at.desc()).limit(500).all()
-    rows = apply_derived_filters(rows, request.args)
+    analysis_cache = {}
+    rows = apply_derived_filters(rows, request.args, analysis_cache=analysis_cache)
     devices = _device_query().order_by(Device.device_name).all()
     vehicles = sorted({device.vehicle_name for device in devices if device.vehicle_name})
     return render_template(
         "sessions.html",
-        sessions=[session_summary(row) for row in rows],
+        sessions=session_summaries(rows, analysis_cache=analysis_cache),
         devices=devices,
         vehicles=vehicles,
         filters=request.args,
-        session_states=("Uploaded", "Processing", "Analyzed", "Analysis failed", "Invalid data"),
-        analysis_results=("Normal", "Minor anomaly", "Requires attention", "High anomaly", "Analysis unavailable"),
+        session_states=("Uploaded", "Processing", "Captured", "Analysis pending", "Analyzed", "Analysis failed", "Invalid data"),
+        analysis_results=("Normal", "Monitor", "Limited data", "Minor anomaly", "Requires attention", "High anomaly", "Analysis unavailable"),
     )
 
 
@@ -231,7 +270,7 @@ def session_detail(session_pk):
     return render_template(
         "session_detail.html",
         session=ride_session,
-        summary=session_summary(ride_session),
+        summary=session_summary(ride_session, analysis=analysis),
         statistics=stats,
         analysis=analysis,
         records=_record_rows(recent_records),
@@ -246,10 +285,11 @@ def session_detail(session_pk):
 def session_json(session_pk):
     ride_session = _session_by_pk(session_pk)
     records = session_records(ride_session)
+    analysis = analysis_snapshot(ride_session, records)
     return jsonify({
-        "session": session_summary(ride_session),
+        "session": session_summary(ride_session, analysis=analysis),
         "statistics": statistics_for_records(records, ride_session),
-        "analysis": analysis_snapshot(ride_session, records),
+        "analysis": analysis,
         "records": [record.to_dict() for record in records],
     })
 
@@ -262,7 +302,7 @@ def update_session_notes(session_pk):
     ride_session.notes = str(data.get("notes", "")).strip()[:2000] or None
     db.session.commit()
     if request.is_json:
-        return jsonify({"session": session_summary(ride_session)})
+        return jsonify({"session": session_summary(ride_session, include_analysis=False)})
     return redirect(url_for("dashboard.session_detail", session_pk=ride_session.id))
 
 
@@ -286,8 +326,9 @@ def delete_session(session_pk):
 def sessions_api():
     query = query_sessions_for_user(_session_query(), request.args)
     rows = query.order_by(RideSession.started_at.desc()).limit(500).all()
-    rows = apply_derived_filters(rows, request.args)
-    return jsonify({"sessions": [session_summary(row) for row in rows]})
+    analysis_cache = {}
+    rows = apply_derived_filters(rows, request.args, analysis_cache=analysis_cache)
+    return jsonify({"sessions": session_summaries(rows, analysis_cache=analysis_cache)})
 
 
 @dashboard_bp.get("/api/sessions/<int:session_pk>/samples")
@@ -327,18 +368,19 @@ def session_events_api(session_pk):
 @login_required
 def rerun_analysis_api(session_pk):
     ride_session = _session_by_pk(session_pk)
-    status = ml_status()
     snapshot = analysis_snapshot(ride_session)
-    if not status["available"]:
+    result = submit_session_to_analyzer(ride_session.id, force=True)
+    if result["state"] != "completed":
         return jsonify({
             "state": "failed",
-            "error": status["message"],
+            "error": result.get("error", "Analysis submission failed."),
             "analysis": snapshot,
         }), 503
     return jsonify({
         "state": "completed",
-        "message": "Local dashboard analysis snapshot refreshed. Persisted ML re-analysis is not available in this repository yet.",
-        "analysis": snapshot,
+        "message": result.get("message", "Canonical telemetry was submitted to the analyzer."),
+        "analysis": analysis_snapshot(ride_session),
+        "analysis_result": result.get("analysis"),
     })
 
 
@@ -349,7 +391,7 @@ def analysis():
     return render_template(
         "analysis.html",
         ml_status=ml_status(),
-        analyses=[analysis_snapshot(row) for row in rows],
+        analyses=session_summaries(rows),
     )
 
 
@@ -361,31 +403,11 @@ def analysis_status_api():
     return jsonify(status)
 
 
-@dashboard_bp.get("/compare")
-@login_required
-def compare():
-    rows = _session_query().order_by(RideSession.started_at.desc()).limit(250).all()
-    return render_template("compare.html", sessions=[session_summary(row) for row in rows])
-
-
-@dashboard_bp.get("/api/compare")
-@login_required
-def compare_api():
-    try:
-        baseline_id = int(request.args.get("baseline", ""))
-        comparison_id = int(request.args.get("comparison", ""))
-    except ValueError:
-        return jsonify({"error": "baseline and comparison session ids are required"}), 400
-    baseline = _session_by_pk(baseline_id)
-    comparison = _session_by_pk(comparison_id)
-    return jsonify(compare_sessions(baseline, comparison))
-
-
 @dashboard_bp.get("/tool")
 @login_required
 def tool():
     rows = _session_query().order_by(RideSession.started_at.desc()).limit(250).all()
-    return render_template("tool.html", sessions=[session_summary(row) for row in rows])
+    return render_template("tool.html", sessions=session_summaries(rows))
 
 
 @dashboard_bp.get("/settings")
@@ -405,12 +427,26 @@ def session_csv(session_pk):
         "seq",
         "timestamp",
         "device_time_ms",
+        "timestamp_ms",
         "server_received_at",
         "rpm",
         "tps",
         "ect",
         "iat",
         "battery",
+        "tps_voltage",
+        "tps_raw",
+        "tps_raw_candidate",
+        "battery_voltage",
+        "iat_c",
+        "ect_c",
+        "ect_c_candidate",
+        "map_raw",
+        "frame_valid",
+        "checksum_valid",
+        "decoder_valid",
+        "candidate_signals",
+        "quality_flags",
         "injector_ms",
         "ignition_deg",
         "raw_frame",
@@ -422,15 +458,29 @@ def session_csv(session_pk):
             record.seq,
             record.timestamp.isoformat() if record.timestamp else "",
             record.device_time_ms if record.device_time_ms is not None else "",
+            record.timestamp_ms if record.timestamp_ms is not None else "",
             record.server_received_at.isoformat() if record.server_received_at else "",
             record.rpm if record.rpm is not None else "",
             record.tps if record.tps is not None else "",
             record.ect if record.ect is not None else "",
             record.iat if record.iat is not None else "",
             record.battery if record.battery is not None else "",
+            record.tps_voltage if record.tps_voltage is not None else "",
+            record.tps_raw if record.tps_raw is not None else "",
+            record.tps_raw_candidate if record.tps_raw_candidate is not None else "",
+            record.battery_voltage if record.battery_voltage is not None else "",
+            record.iat_c if record.iat_c is not None else "",
+            record.ect_c if record.ect_c is not None else "",
+            record.ect_c_candidate if record.ect_c_candidate is not None else "",
+            record.map_raw if record.map_raw is not None else "",
+            record.frame_valid,
+            record.checksum_valid,
+            record.decoder_valid,
+            json.dumps(record.candidate_signals, separators=(",", ":")) if record.candidate_signals is not None else "",
+            json.dumps(record.quality_flags, separators=(",", ":")) if record.quality_flags is not None else "",
             record.injector_ms if record.injector_ms is not None else "",
             record.ignition_deg if record.ignition_deg is not None else "",
-            record.raw_frame if record.raw_frame is not None else "",
+            json.dumps(record.raw_frame, separators=(",", ":")) if record.raw_frame is not None else "",
         ])
     filename = f"{ride_session.session_id}.csv".replace("/", "_")
     return Response(
@@ -469,6 +519,9 @@ def device_live(device_id):
         ttl_seconds=int(current_app.config["LIVE_SAMPLE_TTL_SECONDS"]),
         latest_url=url_for("dashboard.device_live_latest", device_id=device.device_id),
         stream_url=url_for("dashboard.device_live_stream", device_id=device.device_id),
+        control_url=url_for("dashboard.device_live_control", device_id=device.device_id),
+        enable_url=url_for("dashboard.device_live_enable", device_id=device.device_id),
+        disable_url=url_for("dashboard.device_live_disable", device_id=device.device_id),
     )
 
 
@@ -513,6 +566,35 @@ def device_live_stream(device_id):
     response.headers["Connection"] = "keep-alive"
     response.headers["X-Accel-Buffering"] = "no"
     return response
+
+
+@dashboard_bp.get("/api/devices/<device_id>/live/control")
+@login_required
+def device_live_control(device_id):
+    device = _device_by_public_id(device_id)
+    return _no_store_json({"ok": True, "control": control_state(device)})
+
+
+def _control_command_response(device: Device, command_type: str):
+    try:
+        result = create_live_command(device, command_type, current_user.id)
+    except ControlError as exc:
+        return _no_store_json({"ok": False, "error": {"code": exc.code, "message": str(exc)}}, exc.status_code)
+    return _no_store_json({"ok": True, **result}, 202 if result.get("command") else 200)
+
+
+@dashboard_bp.post("/api/devices/<device_id>/live/enable")
+@login_required
+def device_live_enable(device_id):
+    device = _device_by_public_id(device_id)
+    return _control_command_response(device, COMMAND_ENABLE_LIVE_MODE)
+
+
+@dashboard_bp.post("/api/devices/<device_id>/live/disable")
+@login_required
+def device_live_disable(device_id):
+    device = _device_by_public_id(device_id)
+    return _control_command_response(device, COMMAND_DISABLE_LIVE_MODE)
 
 
 @dashboard_bp.post("/api/devices/<int:device_pk>/rotate-token")

@@ -6,16 +6,7 @@
     const reset = document.getElementById("reset-settings");
     const key = "drisafe.dashboard.preferences";
     const defaults = {
-        temperatureUnit: "C",
-        pressureUnit: "kPa",
-        timeFormat: "24h",
-        dateFormat: "yyyy-mm-dd",
-        chartDensity: "1200",
-        defaultWindow: "all",
-        defaultSignals: "rpm,tps,ect,battery",
-        theme: "system",
-        language: "en",
-        diagnosticDisclaimer: true,
+        language: "vi",
     };
 
     function values() {
@@ -26,8 +17,7 @@
         Object.entries(preferences).forEach(([name, value]) => {
             const field = form.elements[name];
             if (!field) return;
-            if (field.type === "checkbox") field.checked = Boolean(value);
-            else field.value = value;
+            field.value = value;
         });
     }
 
@@ -41,8 +31,9 @@
 
     form.addEventListener("submit", (event) => {
         event.preventDefault();
-        const preferences = { ...defaults, ...values(), diagnosticDisclaimer: form.elements.diagnosticDisclaimer.checked };
+        const preferences = { ...defaults, ...values() };
         localStorage.setItem(key, JSON.stringify(preferences));
+        if (window.drisafeI18n) window.drisafeI18n.setLanguage(preferences.language);
         state.textContent = "Saved";
         window.setTimeout(() => state.textContent = "", 1800);
     });
@@ -50,6 +41,7 @@
     reset.addEventListener("click", () => {
         localStorage.removeItem(key);
         apply(defaults);
+        if (window.drisafeI18n) window.drisafeI18n.setLanguage(defaults.language);
         state.textContent = "Reset";
         window.setTimeout(() => state.textContent = "", 1800);
     });

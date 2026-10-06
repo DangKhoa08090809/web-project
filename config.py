@@ -57,6 +57,7 @@ class Config:
     LIVE_MAX_REQUEST_BYTES = int(os.getenv("LIVE_MAX_REQUEST_BYTES", 4096))
     LIVE_SSE_HEARTBEAT_SECONDS = int(os.getenv("LIVE_SSE_HEARTBEAT_SECONDS", 15))
     LIVE_RAW_FRAME_MAX_CHARS = int(os.getenv("LIVE_RAW_FRAME_MAX_CHARS", 256))
+    CONTROL_POLL_STALE_SECONDS = int(os.getenv("CONTROL_POLL_STALE_SECONDS", 10))
     ML_API_BASE_URL = os.getenv("ML_API_BASE_URL", "").rstrip("/")
     ML_API_TIMEOUT_SECONDS = float(os.getenv("ML_API_TIMEOUT_SECONDS", "2.5"))
     ML_MODEL_NAME = os.getenv("ML_MODEL_NAME", "Isolation Forest")
@@ -65,7 +66,7 @@ class Config:
     ML_FEATURE_SCHEMA_VERSION = os.getenv("ML_FEATURE_SCHEMA_VERSION", "")
     ML_DETECTION_THRESHOLD = os.getenv("ML_DETECTION_THRESHOLD", "")
     TRUST_PROXY = os.getenv("TRUST_PROXY", "true" if ENV_NAME == "production" else "false").lower() == "true"
-    TRUSTED_HOSTS = _csv_env("TRUSTED_HOSTS", "drisafe.haithinh.top" if ENV_NAME == "production" else "")
+    TRUSTED_HOSTS = _csv_env("TRUSTED_HOSTS", "drivesafe.top" if ENV_NAME == "production" else "")
     PREFERRED_URL_SCHEME = "https" if ENV_NAME == "production" else "http"
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
@@ -91,6 +92,7 @@ class Config:
             "LIVE_MAX_REQUEST_BYTES": cls.LIVE_MAX_REQUEST_BYTES,
             "LIVE_SSE_HEARTBEAT_SECONDS": cls.LIVE_SSE_HEARTBEAT_SECONDS,
             "LIVE_RAW_FRAME_MAX_CHARS": cls.LIVE_RAW_FRAME_MAX_CHARS,
+            "CONTROL_POLL_STALE_SECONDS": cls.CONTROL_POLL_STALE_SECONDS,
         }
         for name, value in live_positive.items():
             if cls.ENV_NAME == "production" and value <= 0:

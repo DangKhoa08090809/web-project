@@ -40,6 +40,40 @@ Settings
 - Dashboard analysis helpers compute session statistics, downsample chart payloads, group consecutive abnormal samples into events, and keep diagnostic wording cautious.
 - If embedded ML scores are present in stored raw-frame metadata, the dashboard uses them. Otherwise it labels results as local statistical screening; it does not claim an external Isolation Forest result when the ML API is unavailable.
 
+DriveSafe Cloud owns RAW transport, persistence, and product workflow. Analyzer
+owns ECU protocol interpretation. The authoritative production flow is:
+
+```text
+ESP32 / ECU
+     |
+     v
+RAW ECU capture
+     |
+     +--> immutable raw artifact metadata and per-sample raw bytes
+     |
+     v
+Cloud stores RAW unchanged
+     |
+     +--> Analyzer POST /api/v1/raw/decode-analyze
+              |
+              v
+            canonical telemetry + analysis
+     +--> realtime engineer monitor
+     +--> session/history persistence
+```
+
+Downstream dashboard and live preview code must not reimplement byte positions
+such as RPM/TPS/battery/IAT/ECT offsets. ESP durable RAW is decoded only by
+Analyzer. Pi sync provides RAW24, canonical V2, and analysis produced before
+Cloud import.
+
+Ownership boundary:
+
+```text
+DriveSafe Cloud: auth, RAW transport/persistence, canonical persistence, sessions, frontend
+Analyzer: RAW normalization, ECU decode, ML validation, windows, feature extraction, anomaly results
+```
+
 ## Local Setup
 
 ```bash
@@ -78,6 +112,7 @@ LIVE_RATE_LIMIT_BURST=10
 LIVE_MAX_REQUEST_BYTES=4096
 LIVE_SSE_HEARTBEAT_SECONDS=15
 LIVE_RAW_FRAME_MAX_CHARS=256
+CONTROL_POLL_STALE_SECONDS=10
 ML_API_BASE_URL=
 ML_API_TIMEOUT_SECONDS=2.5
 ML_MODEL_NAME=Isolation Forest
@@ -94,7 +129,7 @@ TRUSTED_HOSTS=
 
 When `APP_ENV=production`, `SECRET_KEY` and PostgreSQL settings are required. Production defaults also enable secure cookies, HTTPS URL generation, and proxy header support.
 
-`ML_API_BASE_URL` is optional. When it is empty, the AI Analysis page reports `ML API unavailable` and re-analysis requests return a failed state with a clear configuration message. When it is set, the dashboard probes `<ML_API_BASE_URL>/health` for availability and displays any reported model metadata fields. A persisted FastAPI re-analysis contract is not implemented in this repository yet.
+`ML_API_BASE_URL` is optional. When it is empty, the AI Analysis page reports `ML API unavailable` and re-analysis requests return a failed state with a clear configuration message. When it is set, the dashboard probes `<ML_API_BASE_URL>/health` for availability and submits completed ESP RAW sessions to `<ML_API_BASE_URL>/api/v1/raw/decode-analyze`. Analyzer failure never rolls back captured RAW telemetry; sessions keep separate `capture_status` and `analysis_status` values so they can be retried later.
 
 ## Database Migrations
 
@@ -107,7 +142,7 @@ flask --app app db migrate -m "describe change"
 flask --app app db upgrade
 ```
 
-The current schema includes users, devices, pairing codes, ride sessions, telemetry records, and sync batch diagnostics.
+The current schema includes users, devices, pairing codes, ECU profiles, decoder versions, ride sessions, telemetry records, raw artifact metadata, lightweight analysis results, and sync batch diagnostics.
 
 ## Users
 
@@ -192,7 +227,7 @@ X-Device-ID: <device-id>
 Authorization: Bearer <device-token>
 ```
 
-Request body fields are a single latest sample. Required fields are `session_id`, `seq`, and `device_time_ms`. Optional fields are `timestamp`, `rpm`, `tps`, `tps_voltage`, `ect`, `iat`, `battery`, `injector_ms`, `injector_raw`, `fuel_cut_inferred`, `raw_frame`, `raw_length`, `parser_version`, and `ignition_deg`. Unknown fields are rejected. Numeric fields must be finite, booleans must be real JSON booleans, `raw_frame` must be an even-length hex string, and live request bodies are capped by `LIVE_MAX_REQUEST_BYTES`.
+Request body fields are a single latest sample. Required fields are `session_id`, `seq`, and `device_time_ms`. Optional compatibility fields are `timestamp`, `rpm`, `tps`, `tps_voltage`, `ect`, `iat`, `battery`, `injector_ms`, `injector_raw`, `fuel_cut_inferred`, `raw_frame`, `raw_length`, `parser_version`, `ignition_deg`, and `ecu_profile_id`. If `raw_frame` contains a supported ECU frame, DriveSafe decodes it once and publishes the canonical sample to the live monitor. Unknown fields are rejected. Numeric fields must be finite, booleans must be real JSON booleans, `raw_frame` must be an even-length hex string, and live request bodies are capped by `LIVE_MAX_REQUEST_BYTES`.
 
 Example:
 
@@ -254,6 +289,86 @@ Troubleshooting:
 - Browser shows `DISCONNECTED`: check the reverse proxy SSE buffering settings and that the stream response is not being cached.
 - Browser shows `NO DATA`: no live sample exists or the latest sample TTL expired.
 
+## Remote Live Mode Control
+
+Live Mode control is HTTP polling from the node. It only controls the runtime-only Live Preview producer on the ECU Reader; it does not change durable upload behavior and it does not persist a desired Live Mode state across reboots.
+
+The node generates a fresh `boot_id` on every boot and starts with Live Mode off. Server commands are targeted to the current `(device_id, boot_id)`. A command for boot A is never returned to boot B.
+
+Device poll:
+
+```text
+POST /api/device/control/poll
+Content-Type: application/json
+X-Device-ID: <device-id>
+Authorization: Bearer <device-token>
+```
+
+```json
+{
+  "boot_id": "boot_123",
+  "live_mode": false,
+  "firmware_version": "1.0.0",
+  "uptime_ms": 2500
+}
+```
+
+When no command is pending:
+
+```json
+{
+  "ok": true,
+  "command": null,
+  "server_time": "2026-08-26T12:00:00Z"
+}
+```
+
+When a command is pending:
+
+```json
+{
+  "ok": true,
+  "command": {
+    "command_id": "cmd_abc123",
+    "boot_id": "boot_123",
+    "type": "ENABLE_LIVE_MODE"
+  },
+  "server_time": "2026-08-26T12:00:00Z"
+}
+```
+
+Device acknowledgement:
+
+```text
+POST /api/device/control/ack
+Content-Type: application/json
+X-Device-ID: <device-id>
+Authorization: Bearer <device-token>
+```
+
+```json
+{
+  "boot_id": "boot_123",
+  "command_id": "cmd_abc123",
+  "status": "applied",
+  "live_mode": true
+}
+```
+
+Supported command types are `ENABLE_LIVE_MODE` and `DISABLE_LIVE_MODE`. Acknowledgement statuses are `applied`, `rejected`, and `failed`.
+
+Browser control endpoints require normal dashboard login, device ownership or admin access, and CSRF protection:
+
+```text
+GET  /api/devices/<device_id>/live/control
+POST /api/devices/<device_id>/live/enable
+POST /api/devices/<device_id>/live/disable
+```
+
+The dashboard considers control online only when the node has polled within `CONTROL_POLL_STALE_SECONDS` seconds. If no fresh runtime exists, enable/disable returns `409 DEVICE_OFFLINE` and no indefinite command is queued. Duplicate clicks coalesce with an existing pending/delivered command for the same boot and type. If Enable is pending and Disable is requested, the older command is superseded and the newest intent wins.
+
+The Live Preview page shows `OFF`, `ENABLING...`, `ON`, `DISABLING...`, or unavailable. It reports Live Mode as on only from node acknowledgement or node-reported runtime state; a user click by itself is only pending.
+
 ## Uploading Telemetry
 
 Single development record:
@@ -300,6 +415,10 @@ curl -X POST "https://drisafe.haithinh.top/api/logs/upload" \
 ```
 
 Timestamps are optional and must be timezone-aware ISO 8601 or Unix epoch seconds when present. `device_time_ms` can be used when the node does not know wall-clock time. The server always records `server_received_at`.
+
+Durable uploads must preserve the raw ECU bytes whenever they are available. `raw_frame` may be either a non-empty, even-length compact hexadecimal string such as `"02187117"`, a separated byte string such as `"FF;FF;02;18"`, or an object containing parser metadata plus one of `hex`, `raw_hex`, or `frame_hex`. Those hex fields must also contain recoverable raw bytes. Malformed or byte-less raw-frame metadata is rejected so a node does not receive an acknowledgement for data the backend cannot recover later. CSV exports serialize `raw_frame` as JSON so both string and object forms can be parsed back exactly.
+
+When a supported raw ECU frame is present, uploaded decoded numeric fields are treated as compatibility hints only. DriveSafe parses the frame, checks the checksum rule, applies the persisted ECU profile/decoder version, stores canonical telemetry fields, and fans that same decoded sample out to session history and analyzer submission. If the analyzer is unavailable, the captured session remains stored with `analysis_status=failed` or `not_requested` and can be retried from the dashboard.
 
 ## Acknowledgement Semantics
 
@@ -358,6 +477,7 @@ LIVE_RATE_LIMIT_BURST=10
 LIVE_MAX_REQUEST_BYTES=4096
 LIVE_SSE_HEARTBEAT_SECONDS=15
 LIVE_RAW_FRAME_MAX_CHARS=256
+CONTROL_POLL_STALE_SECONDS=10
 PAIRING_CODE_TTL_SECONDS=900
 PAIRING_MAX_ATTEMPTS=10
 GUNICORN_WORKERS=2
@@ -411,7 +531,7 @@ Local memory fallback reports `"redis":"memory"`. Production reports unhealthy i
 .venv/bin/python -m unittest discover -v
 ```
 
-The tests use an isolated in-memory SQLite database and an in-memory Live Preview backend. They cover login safety, ownership checks, pairing, token rotation, device authentication, idempotent uploads, gap-aware acknowledgements, live validation, rate limiting, latest sample responses, SSE filtering and heartbeat behavior, and the guarantee that live samples do not create durable telemetry rows or ride sessions.
+The tests use an isolated in-memory SQLite database and an in-memory Live Preview backend. They cover login safety, ownership checks, pairing, token rotation, device authentication, idempotent uploads, gap-aware acknowledgements, live validation, rate limiting, latest sample responses, SSE filtering and heartbeat behavior, canonical ECU decode regression, decoder provenance persistence, raw artifact metadata, analyzer failure safety, analyzer retry behavior, and the guarantee that live samples do not create durable telemetry rows or ride sessions.
 
 Dashboard coverage includes overview summaries, recent diagnoses, session filtering, session statistics, anomaly event grouping, large-session downsampling, AI API unavailable handling, re-analysis state responses, compare metrics, Tool playback page rendering, and unit-formatting helpers.
 

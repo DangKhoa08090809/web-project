@@ -20,8 +20,37 @@
     {% endfor %}
 </section>
 
-{% if latest_session %}
 <section class="dashboard-grid">
+    <article class="card feature-card">
+        <div class="card-title">
+            <div>
+                <p class="eyebrow">Vehicle condition</p>
+                <h2>{{ vehicle_condition.label }}</h2>
+                <p class="muted">{{ vehicle_condition.scope }}</p>
+            </div>
+            <span class="badge {{ vehicle_condition.status }}">{{ vehicle_condition.label }}</span>
+        </div>
+        <p>{{ vehicle_condition.message }}</p>
+        <div class="overview-list condition-list">
+            {% for finding in vehicle_condition.findings %}
+            <a class="overview-row" href="{{ url_for('dashboard.session_detail', session_pk=finding.session_pk) }}">
+                <div>
+                    <strong>{{ finding.signal_label }}</strong>
+                    <p>{{ finding.observation }}</p>
+                    {% if finding.recommendation %}<p>{{ finding.recommendation }}</p>{% endif %}
+                </div>
+                <div class="overview-row-metrics">
+                    <span class="badge {{ finding.severity }}">{{ finding.severity_label }}</span>
+                    <span>View details</span>
+                </div>
+            </a>
+            {% else %}
+            <p class="muted">Session details will show evidence when a finding is available.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+{% if latest_session %}
     <article class="card feature-card">
         <div class="card-title">
             <div>
@@ -63,14 +92,14 @@
             {% endfor %}
         </div>
     </article>
-</section>
 {% else %}
-<section class="empty card">
+<article class="empty card">
     <h2>No uploaded sessions yet</h2>
     <p>Durable ride sessions will appear here after an ECU reader uploads stored data.</p>
     <a class="primary button" href="{{ url_for('dashboard.devices') }}">Register a device</a>
-</section>
+</article>
 {% endif %}
+</section>
 
 <section class="two-column balanced">
     <article class="card">

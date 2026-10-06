@@ -1,0 +1,97 @@
+{
+  "session_id": "pi5-contract-session-0001",
+  "batch_id": "pi5-contract-session-0001-final",
+  "session_ended": true,
+  "telemetry_schema_version": "canonical-telemetry-v2",
+  "ecu_profile_id": "honda_keihin_71_17",
+  "decoder_id": "honda_keihin_71_17",
+  "decoder_version": "1.0.0",
+  "sampling": {
+    "sample_interval_ms": 250,
+    "sampling_rate_hz": 4
+  },
+  "capture_started_at": "2026-09-20T09:00:00Z",
+  "capture_ended_at": "2026-09-20T09:00:00.500Z",
+  "records": [
+    {
+      "seq": 0,
+      "timestamp_ms": 0,
+      "raw_hex": "0218711705DC1A02FFFF904D506A7F0064000000000000E9",
+      "raw_length": 24,
+      "rpm": 1250,
+      "tps_voltage": 0.72,
+      "tps_raw": 37,
+      "battery_voltage": 13.6,
+      "iat_c": 31.5,
+      "ect_c": 74,
+      "frame_valid": true,
+      "checksum_valid": true,
+      "candidate_signals": {},
+      "quality_flags": {
+        "source": "pi-contract-fixture"
+      }
+    },
+    {
+      "seq": 1,
+      "timestamp_ms": 250,
+      "raw_hex": "0218711706011D03FFFF914E516B800064000000000000BA",
+      "raw_length": 24,
+      "rpm": 1280,
+      "tps_voltage": 0.73,
+      "tps_raw": 38,
+      "battery_voltage": 13.6,
+      "iat_c": 31.5,
+      "ect_c": 74.5,
+      "frame_valid": true,
+      "checksum_valid": true,
+      "candidate_signals": {},
+      "quality_flags": {
+        "source": "pi-contract-fixture"
+      }
+    },
+    {
+      "seq": 2,
+      "timestamp_ms": 500,
+      "raw_hex": "0218711706262004FFFF924C526C8100640000000000008F",
+      "raw_length": 24,
+      "rpm": 1320,
+      "tps_voltage": 0.75,
+      "tps_raw": 39,
+      "battery_voltage": 13.7,
+      "iat_c": 31.8,
+      "ect_c": 75.2,
+      "frame_valid": true,
+      "checksum_valid": true,
+      "candidate_signals": {},
+      "quality_flags": {
+        "source": "pi-contract-fixture"
+      }
+    }
+  ],
+  "analysis": {
+    "analysis_run_id": "pi-contract-analysis-0001",
+    "model_version": "iforest-baseline-20260920T091709Z",
+    "telemetry_schema_version": "canonical-telemetry-v2",
+    "feature_schema_version": "ecu-window-features-v1",
+    "signal_columns": [
+      "rpm",
+      "tps_voltage",
+      "tps_raw",
+      "battery_voltage",
+      "iat_c",
+      "ect_c"
+    ],
+    "window_count": 3,
+    "anomaly_window_count": 0,
+    "anomaly_ratio": 0,
+    "health_score": 98.5,
+    "overall_status": "limited_data",
+    "most_unusual_features": [],
+    "model_loaded": true,
+    "evidence_window_count": 3,
+    "minimum_windows_for_status": 10,
+    "evidence_sufficient": false,
+    "warnings": [],
+    "note": "Sanitized Pi local analysis fixture."
+  }
+}

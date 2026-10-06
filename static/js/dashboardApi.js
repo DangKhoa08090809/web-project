@@ -46,9 +46,6 @@
         anomalyEvents(sessionId) {
             return request(`/api/sessions/${sessionId}/events`);
         },
-        compare(baseline, comparison) {
-            return request(`/api/compare?${new URLSearchParams({ baseline, comparison })}`);
-        },
         devices() {
             return request("/api/devices");
         },

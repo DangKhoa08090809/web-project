@@ -1,0 +1,33 @@
+{
+  "capture": {
+    "duration_override_s": null,
+    "expected_header_hex": "02187117",
+    "expected_raw_length": 24,
+    "frame_table": "0x17",
+    "host_start_time": "2026-08-12T15:28:32.514+07:00",
+    "no_guidance": false,
+    "sample_rate_source": "ECU polling",
+    "serial_baud": 115200,
+    "serial_port": "COM6"
+  },
+  "data_policy": {
+    "ml_applied": false,
+    "raw_immutable": true,
+    "semantic_decoder_applied": false
+  },
+  "environment": {},
+  "scenario": {
+    "manual_throttle_position_estimates": true,
+    "optional": false,
+    "title": "TPS sweep / engine off"
+  },
+  "scenario_id": "cal_02_tps_sweep",
+  "session_id": "cal_20260812_152832_2a54f0",
+  "vehicle": {
+    "cooling_type": "liquid",
+    "generation": "4-valve",
+    "manufacturer": "Honda",
+    "model": "SH Mode"
+  },
+  "vehicle_id": "honda_shmode_4v_001"
+}

@@ -1,0 +1,138 @@
+{
+  "sessions": [
+    {
+      "session_id": "calib-real-run-r0024d0-c93a5fb4",
+      "inserted": 0,
+      "expected": 6922,
+      "ack": {
+        "contiguous_until": 6921,
+        "maximum": 6921,
+        "minimum": 0
+      },
+      "analysis": null
+    },
+    {
+      "session_id": "calib-real-run-r1032c0-849aa7f8",
+      "inserted": 0,
+      "expected": 6899,
+      "ack": {
+        "contiguous_until": 6898,
+        "maximum": 6898,
+        "minimum": 0
+      },
+      "analysis": null
+    },
+    {
+      "session_id": "calib-real-run-session-000001",
+      "inserted": 0,
+      "expected": 117,
+      "ack": {
+        "contiguous_until": 116,
+        "maximum": 116,
+        "minimum": 0
+      },
+      "analysis": null
+    },
+    {
+      "session_id": "calib-real-run-session-000002",
+      "inserted": 0,
+      "expected": 5781,
+      "ack": {
+        "contiguous_until": 5780,
+        "maximum": 5780,
+        "minimum": 0
+      },
+      "analysis": null
+    },
+    {
+      "session_id": "calib-real-run-session-000003",
+      "inserted": 0,
+      "expected": 1249,
+      "ack": {
+        "contiguous_until": 1248,
+        "maximum": 1248,
+        "minimum": 0
+      },
+      "analysis": null
+    },
+    {
+      "session_id": "calib-real-run-session-000004",
+      "inserted": 0,
+      "expected": 3017,
+      "ack": {
+        "contiguous_until": 3016,
+        "maximum": 3016,
+        "minimum": 0
+      },
+      "analysis": null
+    },
+    {
+      "session_id": "calib-real-run-session-000005",
+      "inserted": 0,
+      "expected": 7851,
+      "ack": {
+        "contiguous_until": 7850,
+        "maximum": 7850,
+        "minimum": 0
+      },
+      "analysis": null
+    },
+    {
+      "session_id": "calib-real-run-session-000006",
+      "inserted": 0,
+      "expected": 923,
+      "ack": {
+        "contiguous_until": 922,
+        "maximum": 922,
+        "minimum": 0
+      },
+      "analysis": null
+    },
+    {
+      "session_id": "calib-real-run-session-000007",
+      "inserted": 0,
+      "expected": 6389,
+      "ack": {
+        "contiguous_until": 6388,
+        "maximum": 6388,
+        "minimum": 0
+      },
+      "analysis": null
+    },
+    {
+      "session_id": "calib-20260812-152832-2a54f0",
+      "inserted": 0,
+      "expected": 471,
+      "ack": {
+        "contiguous_until": 470,
+        "maximum": 470,
+        "minimum": 0
+      },
+      "analysis": null
+    },
+    {
+      "session_id": "calib-20260814-152603-8fd9ed",
+      "inserted": 0,
+      "expected": 741,
+      "ack": {
+        "contiguous_until": 740,
+        "maximum": 740,
+        "minimum": 0
+      },
+      "analysis": null
+    },
+    {
+      "session_id": "calib-20260814-153329-812a3f",
+      "inserted": 0,
+      "expected": 3629,
+      "ack": {
+        "contiguous_until": 3628,
+        "maximum": 3628,
+        "minimum": 0
+      },
+      "analysis": null
+    }
+  ],
+  "total_inserted": 0,
+  "total_expected": 43989
+}

@@ -1,0 +1,124 @@
+{
+  "sessions": [
+    {
+      "session_id": "calib-real-run-r0024d0-c93a5fb4-part-01",
+      "source_session_id": "calib-real-run-r0024d0-c93a5fb4",
+      "artifact": "artifacts/calib_upload/chunked/calib-real-run-r0024d0-c93a5fb4-part-01.jsonl",
+      "inserted": 0,
+      "expected": 5000,
+      "ack": {
+        "contiguous_until": 4999,
+        "maximum": 4999,
+        "minimum": 0
+      }
+    },
+    {
+      "session_id": "calib-real-run-r0024d0-c93a5fb4-part-02",
+      "source_session_id": "calib-real-run-r0024d0-c93a5fb4",
+      "artifact": "artifacts/calib_upload/chunked/calib-real-run-r0024d0-c93a5fb4-part-02.jsonl",
+      "inserted": 0,
+      "expected": 1922,
+      "ack": {
+        "contiguous_until": 1921,
+        "maximum": 1921,
+        "minimum": 0
+      }
+    },
+    {
+      "session_id": "calib-real-run-r1032c0-849aa7f8-part-01",
+      "source_session_id": "calib-real-run-r1032c0-849aa7f8",
+      "artifact": "artifacts/calib_upload/chunked/calib-real-run-r1032c0-849aa7f8-part-01.jsonl",
+      "inserted": 0,
+      "expected": 5000,
+      "ack": {
+        "contiguous_until": 4999,
+        "maximum": 4999,
+        "minimum": 0
+      }
+    },
+    {
+      "session_id": "calib-real-run-r1032c0-849aa7f8-part-02",
+      "source_session_id": "calib-real-run-r1032c0-849aa7f8",
+      "artifact": "artifacts/calib_upload/chunked/calib-real-run-r1032c0-849aa7f8-part-02.jsonl",
+      "inserted": 0,
+      "expected": 1899,
+      "ack": {
+        "contiguous_until": 1898,
+        "maximum": 1898,
+        "minimum": 0
+      }
+    },
+    {
+      "session_id": "calib-real-run-session-000002-part-01",
+      "source_session_id": "calib-real-run-session-000002",
+      "artifact": "artifacts/calib_upload/chunked/calib-real-run-session-000002-part-01.jsonl",
+      "inserted": 0,
+      "expected": 5000,
+      "ack": {
+        "contiguous_until": 4999,
+        "maximum": 4999,
+        "minimum": 0
+      }
+    },
+    {
+      "session_id": "calib-real-run-session-000002-part-02",
+      "source_session_id": "calib-real-run-session-000002",
+      "artifact": "artifacts/calib_upload/chunked/calib-real-run-session-000002-part-02.jsonl",
+      "inserted": 0,
+      "expected": 781,
+      "ack": {
+        "contiguous_until": 780,
+        "maximum": 780,
+        "minimum": 0
+      }
+    },
+    {
+      "session_id": "calib-real-run-session-000005-part-01",
+      "source_session_id": "calib-real-run-session-000005",
+      "artifact": "artifacts/calib_upload/chunked/calib-real-run-session-000005-part-01.jsonl",
+      "inserted": 0,
+      "expected": 5000,
+      "ack": {
+        "contiguous_until": 4999,
+        "maximum": 4999,
+        "minimum": 0
+      }
+    },
+    {
+      "session_id": "calib-real-run-session-000005-part-02",
+      "source_session_id": "calib-real-run-session-000005",
+      "artifact": "artifacts/calib_upload/chunked/calib-real-run-session-000005-part-02.jsonl",
+      "inserted": 0,
+      "expected": 2851,
+      "ack": {
+        "contiguous_until": 2850,
+        "maximum": 2850,
+        "minimum": 0
+      }
+    },
+    {
+      "session_id": "calib-real-run-session-000007-part-01",
+      "source_session_id": "calib-real-run-session-000007",
+      "artifact": "artifacts/calib_upload/chunked/calib-real-run-session-000007-part-01.jsonl",
+      "inserted": 0,
+      "expected": 5000,
+      "ack": {
+        "contiguous_until": 4999,
+        "maximum": 4999,
+        "minimum": 0
+      }
+    },
+    {
+      "session_id": "calib-real-run-session-000007-part-02",
+      "source_session_id": "calib-real-run-session-000007",
+      "artifact": "artifacts/calib_upload/chunked/calib-real-run-session-000007-part-02.jsonl",
+      "inserted": 0,
+      "expected": 1389,
+      "ack": {
+        "contiguous_until": 1388,
+        "maximum": 1388,
+        "minimum": 0
+      }
+    }
+  ]
+}

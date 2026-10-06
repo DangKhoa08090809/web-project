@@ -3,21 +3,20 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}ECU Dashboard{% endblock %}</title>
+    <title>{% block title %}DriveSafe Dashboard{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     {% block head %}{% endblock %}
 </head>
 <body>
     <header class="app-header">
-        <a class="brand" href="{{ url_for('dashboard.home') }}"><span>ECU</span> Master</a>
-        {% if current_user.is_authenticated %}<nav>
-            <a href="{{ url_for('dashboard.home') }}">Overview</a>
-            <a href="{{ url_for('dashboard.sessions') }}">Sessions</a>
-            <a href="{{ url_for('dashboard.analysis') }}">AI Analysis</a>
-            <a href="{{ url_for('dashboard.compare') }}">Compare</a>
-            <a href="{{ url_for('dashboard.tool') }}">Tool</a>
-            <a href="{{ url_for('dashboard.devices') }}">Devices</a>
-            <a href="{{ url_for('dashboard.settings') }}">Settings</a>
+        <a class="brand" href="{{ url_for('dashboard.home') }}"><span>Drive</span>Safe</a>
+        {% if current_user.is_authenticated %}<nav aria-label="Primary">
+            <a href="{{ url_for('dashboard.home') }}" {% if request.endpoint == 'dashboard.home' %}aria-current="page"{% endif %}>Overview</a>
+            <a href="{{ url_for('dashboard.sessions') }}" {% if request.endpoint == 'dashboard.sessions' %}aria-current="page"{% endif %}>Sessions</a>
+            <a href="{{ url_for('dashboard.analysis') }}" {% if request.endpoint == 'dashboard.analysis' %}aria-current="page"{% endif %}>AI Analysis</a>
+            <a href="{{ url_for('dashboard.tool') }}" {% if request.endpoint == 'dashboard.tool' %}aria-current="page"{% endif %}>Tool</a>
+            <a href="{{ url_for('dashboard.devices') }}" {% if request.endpoint == 'dashboard.devices' %}aria-current="page"{% endif %}>Devices</a>
+            <a href="{{ url_for('dashboard.settings') }}" {% if request.endpoint == 'dashboard.settings' %}aria-current="page"{% endif %}>Settings</a>
         </nav>
         <div class="account">
             <span>{{ current_user.full_name }}</span>
@@ -30,6 +29,7 @@
     <main class="page-shell">
         {% block content %}{% endblock %}
     </main>
+    <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

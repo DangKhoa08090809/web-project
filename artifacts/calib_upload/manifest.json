@@ -1,0 +1,126 @@
+{
+  "sessions": [
+    {
+      "session_id": "calib-real-run-r0024d0-c93a5fb4",
+      "source": "data/calibrate/real_run/r0024d0_c93a5fb4.dat.jsonl",
+      "artifact": "artifacts/calib_upload/calib-real-run-r0024d0-c93a5fb4.jsonl",
+      "records": 6922,
+      "raw_lengths": [
+        24
+      ],
+      "median_delta_ms": 250
+    },
+    {
+      "session_id": "calib-real-run-r1032c0-849aa7f8",
+      "source": "data/calibrate/real_run/r1032c0_849aa7f8.dat.jsonl",
+      "artifact": "artifacts/calib_upload/calib-real-run-r1032c0-849aa7f8.jsonl",
+      "records": 6899,
+      "raw_lengths": [
+        24
+      ],
+      "median_delta_ms": 250
+    },
+    {
+      "session_id": "calib-real-run-session-000001",
+      "source": "data/calibrate/real_run/session_000001.jsonl",
+      "artifact": "artifacts/calib_upload/calib-real-run-session-000001.jsonl",
+      "records": 117,
+      "raw_lengths": [
+        24
+      ],
+      "median_delta_ms": 250
+    },
+    {
+      "session_id": "calib-real-run-session-000002",
+      "source": "data/calibrate/real_run/session_000002.jsonl",
+      "artifact": "artifacts/calib_upload/calib-real-run-session-000002.jsonl",
+      "records": 5781,
+      "raw_lengths": [
+        24
+      ],
+      "median_delta_ms": 250
+    },
+    {
+      "session_id": "calib-real-run-session-000003",
+      "source": "data/calibrate/real_run/session_000003.jsonl",
+      "artifact": "artifacts/calib_upload/calib-real-run-session-000003.jsonl",
+      "records": 1249,
+      "raw_lengths": [
+        24
+      ],
+      "median_delta_ms": 250
+    },
+    {
+      "session_id": "calib-real-run-session-000004",
+      "source": "data/calibrate/real_run/session_000004.jsonl",
+      "artifact": "artifacts/calib_upload/calib-real-run-session-000004.jsonl",
+      "records": 3017,
+      "raw_lengths": [
+        24
+      ],
+      "median_delta_ms": 250
+    },
+    {
+      "session_id": "calib-real-run-session-000005",
+      "source": "data/calibrate/real_run/session_000005.jsonl",
+      "artifact": "artifacts/calib_upload/calib-real-run-session-000005.jsonl",
+      "records": 7851,
+      "raw_lengths": [
+        24
+      ],
+      "median_delta_ms": 250
+    },
+    {
+      "session_id": "calib-real-run-session-000006",
+      "source": "data/calibrate/real_run/session_000006.jsonl",
+      "artifact": "artifacts/calib_upload/calib-real-run-session-000006.jsonl",
+      "records": 923,
+      "raw_lengths": [
+        24
+      ],
+      "median_delta_ms": 250
+    },
+    {
+      "session_id": "calib-real-run-session-000007",
+      "source": "data/calibrate/real_run/session_000007.jsonl",
+      "artifact": "artifacts/calib_upload/calib-real-run-session-000007.jsonl",
+      "records": 6389,
+      "raw_lengths": [
+        24
+      ],
+      "median_delta_ms": 250
+    },
+    {
+      "session_id": "calib-20260812-152832-2a54f0",
+      "source": "data/calibrate/calibration/honda_shmode_4v_001/cal_20260812_152832_2a54f0/raw_frames.jsonl",
+      "artifact": "artifacts/calib_upload/calib-20260812-152832-2a54f0.jsonl",
+      "records": 471,
+      "raw_lengths": [
+        24
+      ],
+      "median_delta_ms": 250
+    },
+    {
+      "session_id": "calib-20260814-152603-8fd9ed",
+      "source": "data/calibrate/calibration/honda_shmode_4v_001/cal_20260814_152603_8fd9ed/raw_frames.jsonl",
+      "artifact": "artifacts/calib_upload/calib-20260814-152603-8fd9ed.jsonl",
+      "records": 741,
+      "raw_lengths": [
+        24
+      ],
+      "median_delta_ms": 250
+    },
+    {
+      "session_id": "calib-20260814-153329-812a3f",
+      "source": "data/calibrate/calibration/honda_shmode_4v_001/cal_20260814_153329_812a3f/raw_frames.jsonl",
+      "artifact": "artifacts/calib_upload/calib-20260814-153329-812a3f.jsonl",
+      "records": 3629,
+      "raw_lengths": [
+        24
+      ],
+      "median_delta_ms": 250
+    }
+  ],
+  "total_sessions": 12,
+  "total_records": 43989
+}

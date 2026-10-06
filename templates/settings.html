@@ -3,74 +3,22 @@
 {% block content %}
 <section class="page-heading">
     <div>
-        <p class="eyebrow">Dashboard preferences</p>
+        <p class="eyebrow">Application settings</p>
         <h1>Settings</h1>
-        <p>Historical analysis display preferences.</p>
+        <p>Manage local dashboard preferences.</p>
     </div>
 </section>
 
 <section class="card settings-panel" id="dashboard-settings">
     <form class="settings-grid">
-        <label>Temperature unit
-            <select name="temperatureUnit">
-                <option value="C">Celsius</option>
-                <option value="F">Fahrenheit</option>
-            </select>
-        </label>
-        <label>Pressure unit
-            <select name="pressureUnit">
-                <option value="kPa">kPa</option>
-                <option value="bar">bar</option>
-                <option value="psi">psi</option>
-            </select>
-        </label>
-        <label>Time format
-            <select name="timeFormat">
-                <option value="24h">24-hour</option>
-                <option value="12h">12-hour</option>
-            </select>
-        </label>
-        <label>Date format
-            <select name="dateFormat">
-                <option value="yyyy-mm-dd">YYYY-MM-DD</option>
-                <option value="dd-mm-yyyy">DD-MM-YYYY</option>
-                <option value="mm-dd-yyyy">MM-DD-YYYY</option>
-            </select>
-        </label>
-        <label>Chart sample density
-            <select name="chartDensity">
-                <option value="1200">Balanced</option>
-                <option value="600">Light</option>
-                <option value="3000">Detailed</option>
-            </select>
-        </label>
-        <label>Default chart window
-            <select name="defaultWindow">
-                <option value="all">All</option>
-                <option value="30">30 seconds</option>
-                <option value="60">1 minute</option>
-                <option value="300">5 minutes</option>
-            </select>
-        </label>
-        <label>Default selected signals
-            <input name="defaultSignals" placeholder="rpm,tps,ect,battery">
-        </label>
-        <label>Theme
-            <select name="theme">
-                <option value="system">System</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark ready</option>
-            </select>
-        </label>
-        <label>Language readiness
+        <label>Language
             <select name="language">
                 <option value="en">English</option>
-                <option value="vi">Vietnamese ready</option>
+                <option value="vi">Tiếng Việt</option>
             </select>
         </label>
-        <label class="check"><input type="checkbox" name="diagnosticDisclaimer" checked> Show diagnostic disclaimer</label>
         <div class="button-row settings-actions">
-            <button class="primary" type="submit">Save preferences</button>
+            <button class="primary" type="submit">Save settings</button>
             <button class="secondary" id="reset-settings" type="button">Reset</button>
             <span class="muted" id="settings-state" aria-live="polite"></span>
         </div>

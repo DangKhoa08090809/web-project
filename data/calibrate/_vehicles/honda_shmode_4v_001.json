@@ -1,0 +1,11 @@
+{
+  "cooling_type": "liquid",
+  "ecu_protocol": "Honda/Keihin K-Line",
+  "expected_header_hex": "02187117",
+  "expected_raw_length": 24,
+  "generation": "4-valve",
+  "manufacturer": "Honda",
+  "model": "SH Mode",
+  "table": "0x17",
+  "vehicle_id": "honda_shmode_4v_001"
+}

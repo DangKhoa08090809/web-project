@@ -1,0 +1,11 @@
+event_index,host_time,elapsed_ms,event_type,event_name,note
+1,2026-08-14T15:33:29.856+07:00,17,automatic,capture_start,
+2,2026-08-14T15:33:32.307+07:00,2467,manual,key_on,
+3,2026-08-14T15:33:32.307+07:00,2467,automatic,cranking_requested,
+4,2026-08-14T15:33:37.369+07:00,7530,manual,engine_started,
+5,2026-08-14T15:34:37.378+07:00,67538,automatic,warmup_1min,
+6,2026-08-14T15:36:37.548+07:00,187709,automatic,warmup_3min,
+7,2026-08-14T15:38:37.481+07:00,307642,automatic,warmup_5min,
+8,2026-08-14T15:43:37.542+07:00,607703,automatic,warmup_10min,
+9,2026-08-14T15:48:37.403+07:00,907563,automatic,warmup_15min,
+10,2026-08-14T15:48:37.433+07:00,907594,automatic,capture_end,completed

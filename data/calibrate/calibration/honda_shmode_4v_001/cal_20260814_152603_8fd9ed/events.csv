@@ -1,0 +1,4 @@
+event_index,host_time,elapsed_ms,event_type,event_name,note
+1,2026-08-14T15:26:06.126+07:00,3024,automatic,capture_start,
+2,2026-08-14T15:26:08.976+07:00,5874,manual,key_on,
+3,2026-08-14T15:29:09.314+07:00,186212,automatic,capture_end,completed
